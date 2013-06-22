@@ -23,7 +23,7 @@ typedef struct rtrie_ {
 typedef void (*rtrie_cb)(void*, char *, char *, void*);
 
 size_t rtrie_klen(char *ka, char *ke) {
-    return (size_t)(ke - ka) + 1;
+    return (size_t)(ke - ka);
 }
 
 size_t rtrie_prefix_len(char *s, char *ka, char *ke) {
@@ -31,7 +31,7 @@ size_t rtrie_prefix_len(char *s, char *ka, char *ke) {
     char *se = s + sl;
     size_t pl = 0;
     for( ; s <= se && ka <= ke && *s == *ka; s++, ka++ ) pl++;
-    return pl;
+    return pl < sl ? pl : sl;
 }
 
 rtrie *rtrie_new(char *ka, char *ke, void *v) {
@@ -68,15 +68,17 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     size_t kl = rtrie_klen(t->ka, t->ke);
     char  *se = sa + len;
 
+/*    if( ! *sa ) return; // prune empty strings*/
+
     printf("adding '%s'\n",sa);
+
+    printf("0 prefix: %s %s  %d %d\n",sa, t->ka, pl, kl);
 
     if( rtrie_leaf(t) ) {
         printf("adding leaf %s %d\n",sa,len);
         rtrie_assign(t, sa, se, v);
         return;
     }
-
-    printf("prefix: %s  %d %d\n",sa, pl, kl);
 
     if( !pl ) { // not a prefix
         // add at sibling
@@ -103,13 +105,20 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
         rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
         n->link = t->link;
         t->link = n;
+        // TODO: WTF?
+/*        rtrie_assign(t, t->ka, t->ka + pl - 1, 0);*/
         rtrie_assign(t, t->ka, t->ka + pl - 1, 0);
+        // prune empty strings
+/*        if( ! *(sa + pl)  ) {*/
+/*            t->v = v;*/
+/*            return;*/
+/*        }*/
     }
 
     if( !t->link ) t->link = rtrie_nil();
   
     printf("wtf: %s %s %d\n",t->ka, sa, pl);
-    printf("adding remain: %d '%s' to %s\n", pl, sa + pl, t->ka);
+    printf("adding remain: %d %d '%s' to %s\n", len, pl, sa + pl, t->ka);
     rtrie_add(t->link, sa+pl, len-pl, v);
 }
 
@@ -216,9 +225,10 @@ bool test_5(rtrie *t) {
     struct kv { char k[32]; int v; } buf[] = {
          {  "AABA", 1 }
        , {  "AAB",  2 }
-       , {  "CCD",  3 }
-       , {  "AABC", 4 }
-       , {  "",     5 }
+/*       , {  "CCD",  3 }*/
+/*       , {  "AABC", 4 }*/
+/*       , {  "",     5 }*/
+/*       , {  "",     7 }*/
     };
 
     int i = 0;
@@ -245,7 +255,7 @@ bool test_6(rtrie *t) {
 
     int i = 0;
     for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
-        rtrie_add(t, buf[i].k, strlen(buf[i].k)-1, &buf[i].v);
+        rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
     }
 
     char tmp[256];
@@ -261,8 +271,8 @@ int main(int _, char **__) {
 /*    test_2(rtrie_nil());*/
 /*    test_3(rtrie_nil());*/
 /*    test_4(rtrie_nil());*/
-/*    test_5(rtrie_nil());*/
-    test_6(rtrie_nil());
+    test_5(rtrie_nil());
+/*    test_6(rtrie_nil());*/
     return 0;
 }
 
