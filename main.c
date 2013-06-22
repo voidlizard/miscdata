@@ -140,7 +140,27 @@ void rtrie_bfs(rtrie *t, void *cc, rtrie_cb cb) {
 void rtrie_lookup_go(rtrie *t) {
 }
 
-void rtrie_lookup(rtrie *t, char const* key) {
+bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l) {
+    char *s  = (char*)key;
+    char *se = s + len;
+    size_t pl = rtrie_prefix_len(s,t->ka,t->ke);
+
+    if( !t ) {
+        l = 0;
+        return false;
+    }
+
+    if( !pl ) {
+        return rtrie_lookup(t->sibling, key, len, l);
+    } else if( pl == rtrie_klen(s,se) ) {
+        *l = t;
+        return true;
+    } else {
+        return rtrie_lookup(t->link, se + pl, len - pl, l);
+    }
+
+    *l = 0;
+    return false;
 }
 
 bool test_1(rtrie *t) {
@@ -274,13 +294,46 @@ bool test_6(rtrie *t) {
 }
 
 
+bool test_7(rtrie *t) {
+    (void)t;
+    
+    struct kv { char k[32]; int v; } buf[] = {
+         {  "JOPA",    1 }
+       , {  "KITA",    2 }
+       , {  "PECHEN",  3 }
+       , {  "TRESKI",  4 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+    }
+
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        char k[32];
+        rtrie *n = 0;
+        bool r = rtrie_lookup(t, buf[i].k, strlen(buf[i].k), &n);
+        int  v = -1;
+        if( n ) {
+            snode(k, sizeof(buf), n->ka, n->ke);
+            v = n->v ? *(int*)n->v : -1;
+        }
+        printf("FOUND %s: %s (%s,%d) \n", (r?"TRUE":"FALSE"), buf[i].k, k, v);
+    }
+
+    return false;
+}
+
+
+
 int main(int _, char **__) {
 /*    test_1(rtrie_nil());*/
 /*    test_2(rtrie_nil());*/
 /*    test_3(rtrie_nil());*/
 /*    test_4(rtrie_nil());*/
 /*    test_5(rtrie_nil());*/
-    test_6(rtrie_nil());
+/*    test_6(rtrie_nil());*/
+    test_7(rtrie_nil());
     return 0;
 }
 
