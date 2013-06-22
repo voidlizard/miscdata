@@ -7,8 +7,8 @@
 #define safecall(v, f, ...)  ((f) ? (f(__VA_ARGS__)) : (v))
 #define unit {} 
 
-
 void dump_node(void *cc, char *sa, char *se, void *v);
+char* snode(char *buf, size_t len, char *sa, char *se); 
 
 static char *const leafptr = "{nil}";
 
@@ -30,7 +30,7 @@ size_t rtrie_prefix_len(char *s, char *ka, char *ke) {
     size_t sl = strlen(s);
     char *se = s + sl;
     size_t pl = 0;
-    for( ; s <= se && ka <= ke && *s == *ka; s++, ka++ ) pl++;
+    for( ; s < se && ka < ke && *s == *ka; s++, ka++ ) pl++;
     return pl < sl ? pl : sl;
 }
 
@@ -67,24 +67,26 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     size_t pl = rtrie_prefix_len(sa,t->ka,t->ke);
     size_t kl = rtrie_klen(t->ka, t->ke);
     char  *se = sa + len;
+/*    char buf1[128];*/
+/*    char buf2[128];*/
+
+/*    printf("adding '%s' to '%s'\n", snode(buf1,sizeof(buf1),sa,sa+len), snode(buf2,sizeof(buf2),t->ka,t->ke));*/
+
+/*    printf("0 prefix: %s %s (pl %d) (kl %d) (l %d)\n",sa, snode(buf2,sizeof(buf2),t->ka,t->ke), pl, kl,len);*/
 
     if( ! *sa ) return; // prune empty strings
 
-    printf("adding '%s'\n",sa);
-
-    printf("0 prefix: %s %s  %d %d\n",sa, t->ka, pl, kl);
-
     if( rtrie_leaf(t) ) {
-        printf("adding leaf %s %d\n",sa,len);
+/*        printf("adding leaf %s %d\n",sa,len);*/
         rtrie_assign(t, sa, se, v);
         return;
     }
 
     if( !pl ) { // not a prefix
         // add at sibling
-        printf("adding sibling %s\n",sa);
+/*        printf("adding sibling %s\n",sa);*/
         if( !t->sibling ) {
-            printf("new sibling %s\n",sa);
+/*            printf("new sibling %s\n",sa);*/
             rtrie *n = rtrie_new(sa, se, v);
             n->sibling = t->sibling;
             t->sibling = n;
@@ -95,19 +97,19 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     }
 
     if( pl == len && kl == len ) {
-        printf("just replace %s : %s with %s\n", sa, t->ka, sa);
+/*        printf("just replace %s : %s with %s\n", sa, t->ka, sa);*/
         t->v = v;
         return;
     }
 
     if( pl < kl ) { // new node
-        printf("split node (pl %d) (kl %d) %s ( %s )\n", pl, kl, t->ka, sa);
+/*        printf("split node (pl %d) (kl %d)\n", pl, kl);*/
         rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
         n->link = t->link;
         t->link = n;
         // TODO: WTF?
 /*        rtrie_assign(t, t->ka, t->ka + pl - 1, 0);*/
-        rtrie_assign(t, t->ka, t->ka + pl - 1, 0);
+        rtrie_assign(t, t->ka, t->ka + pl, 0);
         // prune empty strings
         if( ! *(sa + pl)  ) {
             t->v = v;
@@ -116,9 +118,15 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     }
 
     if( !t->link ) t->link = rtrie_nil();
+
+    // prune empty string
+/*    if( *(sa + pl) ) {*/
+/*        rtrie_assign(t->link, sa+pl, sa+len-pl-1, v);*/
+/*        return;*/
+/*    }*/
   
-    printf("wtf: %s %s %d\n",t->ka, sa, pl);
-    printf("adding remain: %d %d '%s' to %s\n", len, pl, sa + pl, t->ka);
+/*    printf("wtf: %s %s %d\n",t->ka, sa, pl);*/
+/*    printf("adding remain: %d %d '%s' to %s\n", len, pl, sa + pl, t->ka);*/
     rtrie_add(t->link, sa+pl, len-pl, v);
 }
 
@@ -139,8 +147,9 @@ bool test_1(rtrie *t) {
     (void)t;
     
     struct kv { char k[32]; int v; } buf[] = {
-          {  "A",  31 }
-        , {  "AB", 32 }
+          {  "A",   31 }
+        , {  "AB",  32 }
+        , {  "AAC", 33 }
     };
 
     int i = 0;
@@ -160,7 +169,7 @@ bool test_2(rtrie *t) {
     struct kv { char k[32]; int v; } buf[] = {
           {  "AB",     1 }
         , {  "A",      2 }
-        , {  "ABC",    3 }
+        , {  "AB",     3 }
     };
 
     int i = 0;
@@ -250,6 +259,7 @@ bool test_6(rtrie *t) {
        , {  "AC",    3 }
        , {  "AC",    4 }
        , {  "AC",    5 }
+       , {  "A",     6 }
     };
 
     int i = 0;
@@ -264,7 +274,6 @@ bool test_6(rtrie *t) {
 }
 
 
-
 int main(int _, char **__) {
 /*    test_1(rtrie_nil());*/
 /*    test_2(rtrie_nil());*/
@@ -276,13 +285,17 @@ int main(int _, char **__) {
 }
 
 
-void dump_node(void *cc, char *sa, char *se, void *v) {
-    char *buf = (char*)cc;
+char* snode(char *buf, size_t len, char *sa, char *se) {
     char *p = buf;
     size_t l = 0;
-    for(; sa <= se && l < 127; p++, sa++ ) *p = *sa;
-     *p++ = 0;
+    for(; sa < se && l < len; sa++, p++) *p = *sa;
+    *p = 0;
+    return buf;
+}
+
+void dump_node(void *cc, char *sa, char *se, void *v) {
+    char *buf = (char*)cc;
     int vv = v ? *(int*)v : -1;
-    fprintf(stdout, "%s#%d\n", buf, vv);
+    fprintf(stdout, "%s#%d\n", snode(buf,128,sa,se), vv);
 }
 
