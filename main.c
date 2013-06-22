@@ -67,26 +67,17 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     size_t pl = rtrie_prefix_len(sa,t->ka,t->ke);
     size_t kl = rtrie_klen(t->ka, t->ke);
     char  *se = sa + len;
-/*    char buf1[128];*/
-/*    char buf2[128];*/
-
-/*    printf("adding '%s' to '%s'\n", snode(buf1,sizeof(buf1),sa,sa+len), snode(buf2,sizeof(buf2),t->ka,t->ke));*/
-
-/*    printf("0 prefix: %s %s (pl %d) (kl %d) (l %d)\n",sa, snode(buf2,sizeof(buf2),t->ka,t->ke), pl, kl,len);*/
 
     if( ! *sa ) return; // prune empty strings
 
     if( rtrie_leaf(t) ) {
-/*        printf("adding leaf %s %d\n",sa,len);*/
         rtrie_assign(t, sa, se, v);
         return;
     }
 
     if( !pl ) { // not a prefix
         // add at sibling
-/*        printf("adding sibling %s\n",sa);*/
         if( !t->sibling ) {
-/*            printf("new sibling %s\n",sa);*/
             rtrie *n = rtrie_new(sa, se, v);
             n->sibling = t->sibling;
             t->sibling = n;
@@ -97,18 +88,14 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     }
 
     if( pl == len && kl == len ) {
-/*        printf("just replace %s : %s with %s\n", sa, t->ka, sa);*/
         t->v = v;
         return;
     }
 
     if( pl < kl ) { // new node
-/*        printf("split node (pl %d) (kl %d)\n", pl, kl);*/
         rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
         n->link = t->link;
         t->link = n;
-        // TODO: WTF?
-/*        rtrie_assign(t, t->ka, t->ka + pl - 1, 0);*/
         rtrie_assign(t, t->ka, t->ka + pl, 0);
         // prune empty strings
         if( ! *(sa + pl)  ) {
@@ -119,14 +106,6 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
 
     if( !t->link ) t->link = rtrie_nil();
 
-    // prune empty string
-/*    if( *(sa + pl) ) {*/
-/*        rtrie_assign(t->link, sa+pl, sa+len-pl-1, v);*/
-/*        return;*/
-/*    }*/
-  
-/*    printf("wtf: %s %s %d\n",t->ka, sa, pl);*/
-/*    printf("adding remain: %d %d '%s' to %s\n", len, pl, sa + pl, t->ka);*/
     rtrie_add(t->link, sa+pl, len-pl, v);
 }
 
@@ -137,18 +116,16 @@ void rtrie_bfs(rtrie *t, void *cc, rtrie_cb cb) {
     rtrie_bfs(t->link, cc, cb);
 }
 
-void rtrie_lookup_go(rtrie *t) {
-}
-
 bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l) {
     char *s  = (char*)key;
     char *se = s + len;
-    size_t pl = rtrie_prefix_len(s,t->ka,t->ke);
 
     if( !t ) {
         l = 0;
         return false;
     }
+
+    size_t pl = rtrie_prefix_len(s,t->ka,t->ke);
 
     if( !pl ) {
         return rtrie_lookup(t->sibling, key, len, l);
@@ -156,7 +133,8 @@ bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l) {
         *l = t;
         return true;
     } else {
-        return rtrie_lookup(t->link, se + pl, len - pl, l);
+        *l = t;
+        return rtrie_lookup(t->link, s + pl, len - pl, l);
     }
 
     *l = 0;
@@ -324,6 +302,46 @@ bool test_7(rtrie *t) {
     return false;
 }
 
+bool test_8(rtrie *t) {
+    (void)t;
+    
+    struct kv { char k[32]; int v; } buf[] = {
+         {  "A",       1 }
+       , {  "ABAK",    2 }
+       , {  "ABAKAN",  3 }
+       , {  "BABA",    4 }
+       , {  "AB",      0 }
+       , {  "A",       0 }
+       , {  "AR",     -1 }
+       , {  "ARBAN",  -2 }
+       , {  "MOMOMO", -3 }
+       , {  "ZBABA",  -4 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        if( buf[i].v > 0 ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+        }
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        char k[32];
+        rtrie *n = 0;
+        bool r = rtrie_lookup(t, buf[i].k, strlen(buf[i].k), &n);
+        int  v = -1;
+        if( n ) {
+            snode(k, sizeof(buf), n->ka, n->ke);
+            v = n->v ? *(int*)n->v : -1;
+        }
+        printf("FOUND %s: %s (%s,%d) #%ul \n", (r?"TRUE":"FALSE"), buf[i].k, k, v, n);
+    }
+
+    return false;
+}
 
 
 int main(int _, char **__) {
@@ -333,7 +351,8 @@ int main(int _, char **__) {
 /*    test_4(rtrie_nil());*/
 /*    test_5(rtrie_nil());*/
 /*    test_6(rtrie_nil());*/
-    test_7(rtrie_nil());
+/*    test_7(rtrie_nil());*/
+    test_8(rtrie_nil());
     return 0;
 }
 
