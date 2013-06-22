@@ -68,18 +68,18 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     size_t kl = rtrie_klen(t->ka, t->ke);
     char  *se = sa + len;
 
-    printf("adding %s\n",sa);
+/*    printf("adding %s\n",sa);*/
 
 
     if( rtrie_leaf(t) ) {
-        printf("adding leaf %s %d\n",sa,len);
+/*        printf("adding leaf %s %d\n",sa,len);*/
         rtrie_assign(t, sa, se, v);
         return;
     }
 
     if( !pl ) { // not a prefix
         // add at sibling
-        printf("adding sibling %s\n",sa);
+/*        printf("adding sibling %s\n",sa);*/
         if( !t->sibling ) {
             printf("new sibling %s\n",sa);
             rtrie *n = rtrie_new(sa, se, v);
@@ -92,13 +92,13 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     }
 
     if( pl == len && kl == len ) {
-        printf("just replace %s with %s\n", t->ka, sa);
+/*        printf("just replace %s with %s\n", t->ka, sa);*/
         t->v = v;
         return;
     }
 
     if( pl < kl ) { // new node
-        printf("split node (pl %d) (kl %d) %s ( %s )\n", pl, kl, t->ka, sa);
+/*        printf("split node (pl %d) (kl %d) %s ( %s )\n", pl, kl, t->ka, sa);*/
         rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
         n->link = t->link;
         t->link = n;
@@ -107,7 +107,7 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
 
     if( !t->link ) t->link = rtrie_nil();
    
-    printf("adding remain: %d %s to %s\n", pl, sa + pl, t->ka);
+/*    printf("adding remain: %d %s to %s\n", pl, sa + pl, t->ka);*/
     rtrie_add(t->link, sa+pl, len-pl, v);
 }
 
