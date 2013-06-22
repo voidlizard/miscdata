@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,8 @@ typedef struct rtrie_ {
     char          *v;
 } rtrie;
 
+
+typedef void (*rtrie_cb)(void*, char *, char *, void*);
 
 size_t rtrie_klen(char *ka, char *ke) {
     return (size_t)(ke - ka);
@@ -48,33 +51,52 @@ rtrie *rtrie_assign(rtrie *t, char *ka, char *ke, void *v) {
     return t;
 }
 
+bool rtrie_leaf(rtrie *t) {
+    return !t->sibling && !t->link;
+}
+
 void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     size_t pl = rtrie_prefix_len(sa,t->ka,t->ke);
-    if( pl ) {
-        if( len < rtrie_klen(t->ka, t->ke) ) {
-            rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
-            rtrie_assign(t, sa, sa + len, v);
-            n->link = t->link;
-            t->link = n;
-        } else if( len == rtrie_klen(t->ka, t->ke) && !t->v ) {
-            t->v = v;
-            return;
-        }
-        rtrie_add(t->link, sa + pl, len - pl, v);
-    } else {
+    size_t kl = rtrie_klen(t->ka, t->ke);
+    char  *se = sa + len;
+
+    assert(t);
+
+    if( rtrie_leaf(t) ) {
+        rtrie_assign(t, sa, se, v);
+        return;
+    }
+
+    if( !pl ) { // not a prefix
+        // add at sibling
         if( !t->sibling ) {
-            rtrie *n = rtrie_new(sa, sa+len, v);
-            n->sibling = t->sibling;
+            rtrie *n = rtrie_new(sa, se, v);
             t->sibling = n;
             return;
         }
         rtrie_add(t->sibling, sa, len, v);
+        return;
     }
+
+    if( pl == len && kl == len ) {
+        t->v = v;
+        return;
+    }
+
+    if( pl < kl ) { // new node
+        rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
+        n->link = t->link;
+        t->link = n;
+        rtrie_assign(t, t->ka, t->ka - pl, 0);
+    }
+    
+    rtrie_add(t, sa + pl, len - pl, v);
+}
+
+void rtrie_scan(rtrie *t, rtrie_cb fn, void *cc) {
 }
 
 int main(int _, char **__) {
     return 0;
 }
-
-
 
