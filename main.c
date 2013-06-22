@@ -17,20 +17,20 @@ typedef struct rtrie_ {
     struct rtrie_ *sibling;
     char          *ka;
     char          *ke;
-    char          *v;
+    void          *v;
 } rtrie;
 
 typedef void (*rtrie_cb)(void*, char *, char *, void*);
 
 size_t rtrie_klen(char *ka, char *ke) {
-    return (size_t)(ke - ka);
+    return (size_t)(ke - ka) + 1;
 }
 
 size_t rtrie_prefix_len(char *s, char *ka, char *ke) {
     size_t sl = strlen(s);
     char *se = s + sl;
     size_t pl = 0;
-    for( ; *s && s < se && ka < ke && *s == *ka; s++, ka++ ) pl++;
+    for( ; s <= se && ka <= ke && *s == *ka; s++, ka++ ) pl++;
     return pl;
 }
 
@@ -68,18 +68,19 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     size_t kl = rtrie_klen(t->ka, t->ke);
     char  *se = sa + len;
 
-/*    printf("adding %s\n",sa);*/
-
+    printf("adding '%s'\n",sa);
 
     if( rtrie_leaf(t) ) {
-/*        printf("adding leaf %s %d\n",sa,len);*/
+        printf("adding leaf %s %d\n",sa,len);
         rtrie_assign(t, sa, se, v);
         return;
     }
 
+    printf("prefix: %s  %d %d\n",sa, pl, kl);
+
     if( !pl ) { // not a prefix
         // add at sibling
-/*        printf("adding sibling %s\n",sa);*/
+        printf("adding sibling %s\n",sa);
         if( !t->sibling ) {
             printf("new sibling %s\n",sa);
             rtrie *n = rtrie_new(sa, se, v);
@@ -92,13 +93,13 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     }
 
     if( pl == len && kl == len ) {
-/*        printf("just replace %s with %s\n", t->ka, sa);*/
+        printf("just replace %s : %s with %s\n", sa, t->ka, sa);
         t->v = v;
         return;
     }
 
     if( pl < kl ) { // new node
-/*        printf("split node (pl %d) (kl %d) %s ( %s )\n", pl, kl, t->ka, sa);*/
+        printf("split node (pl %d) (kl %d) %s ( %s )\n", pl, kl, t->ka, sa);
         rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
         n->link = t->link;
         t->link = n;
@@ -106,8 +107,9 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     }
 
     if( !t->link ) t->link = rtrie_nil();
-   
-/*    printf("adding remain: %d %s to %s\n", pl, sa + pl, t->ka);*/
+  
+    printf("wtf: %s %s %d\n",t->ka, sa, pl);
+    printf("adding remain: %d '%s' to %s\n", pl, sa + pl, t->ka);
     rtrie_add(t->link, sa+pl, len-pl, v);
 }
 
@@ -116,6 +118,12 @@ void rtrie_bfs(rtrie *t, void *cc, rtrie_cb cb) {
     safecall(unit, cb, cc, t->ka, t->ke, t->v);
     rtrie_bfs(t->sibling, cc, cb);
     rtrie_bfs(t->link, cc, cb);
+}
+
+void rtrie_lookup_go(rtrie *t) {
+}
+
+void rtrie_lookup(rtrie *t, char const* key) {
 }
 
 bool test_1(rtrie *t) {
@@ -202,11 +210,59 @@ bool test_4(rtrie *t) {
     return false;
 }
 
+bool test_5(rtrie *t) {
+    (void)t;
+    
+    struct kv { char k[32]; int v; } buf[] = {
+         {  "AABA", 1 }
+       , {  "AAB",  2 }
+       , {  "CCD",  3 }
+       , {  "AABC", 4 }
+       , {  "",     5 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    return false;
+}
+
+bool test_6(rtrie *t) {
+    (void)t;
+    
+    struct kv { char k[32]; int v; } buf[] = {
+         {  "AC",    1 }
+       , {  "AABA",  2 }
+       , {  "AC",    3 }
+       , {  "AC",    4 }
+       , {  "AC",    5 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        rtrie_add(t, buf[i].k, strlen(buf[i].k)-1, &buf[i].v);
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    return false;
+}
+
+
+
 int main(int _, char **__) {
 /*    test_1(rtrie_nil());*/
 /*    test_2(rtrie_nil());*/
 /*    test_3(rtrie_nil());*/
-    test_4(rtrie_nil());
+/*    test_4(rtrie_nil());*/
+/*    test_5(rtrie_nil());*/
+    test_6(rtrie_nil());
     return 0;
 }
 
