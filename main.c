@@ -68,7 +68,7 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     size_t kl = rtrie_klen(t->ka, t->ke);
     char  *se = sa + len;
 
-/*    if( ! *sa ) return; // prune empty strings*/
+    if( ! *sa ) return; // prune empty strings
 
     printf("adding '%s'\n",sa);
 
@@ -109,10 +109,10 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
 /*        rtrie_assign(t, t->ka, t->ka + pl - 1, 0);*/
         rtrie_assign(t, t->ka, t->ka + pl - 1, 0);
         // prune empty strings
-/*        if( ! *(sa + pl)  ) {*/
-/*            t->v = v;*/
-/*            return;*/
-/*        }*/
+        if( ! *(sa + pl)  ) {
+            t->v = v;
+            return;
+        }
     }
 
     if( !t->link ) t->link = rtrie_nil();
@@ -158,10 +158,9 @@ bool test_2(rtrie *t) {
     (void)t;
     
     struct kv { char k[32]; int v; } buf[] = {
-          {  "ABCD",  31 }
-        , {  "QQQ",   32 }
-        , {  "ABK",   33 }
-        , {  "QQQE",  34 }
+          {  "AB",     1 }
+        , {  "A",      2 }
+        , {  "ABC",    3 }
     };
 
     int i = 0;
@@ -225,10 +224,10 @@ bool test_5(rtrie *t) {
     struct kv { char k[32]; int v; } buf[] = {
          {  "AABA", 1 }
        , {  "AAB",  2 }
-/*       , {  "CCD",  3 }*/
-/*       , {  "AABC", 4 }*/
-/*       , {  "",     5 }*/
-/*       , {  "",     7 }*/
+       , {  "CCD",  3 }
+       , {  "AABC", 4 }
+       , {  "",     5 }
+       , {  "",     7 }
     };
 
     int i = 0;
@@ -271,8 +270,8 @@ int main(int _, char **__) {
 /*    test_2(rtrie_nil());*/
 /*    test_3(rtrie_nil());*/
 /*    test_4(rtrie_nil());*/
-    test_5(rtrie_nil());
-/*    test_6(rtrie_nil());*/
+/*    test_5(rtrie_nil());*/
+    test_6(rtrie_nil());
     return 0;
 }
 
