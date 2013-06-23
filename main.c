@@ -449,10 +449,11 @@ bool test_10(rtrie *t) {
     struct q { char q[64]; } qq[] = {
          {  ".ur.ay" }
        , {  ".moc.oob" }
-/*       , {  ".moc.abcd" }*/
-/*       , {  ".moc.elgoog.c" }*/
-/*       , {  ".moc.elgoog.a.d" }*/
-/*       , {  ".oof" }*/
+       , {  ".gro.fbo" }
+       , {  ".moc.abcd" }
+       , {  ".moc.elgoog.c" }
+       , {  ".moc.elgoog.a.d" }
+       , {  ".oof" }
     };
 
     char tmp[256];
@@ -484,9 +485,9 @@ int main(int _, char **__) {
 /*    test_5(rtrie_nil());*/
 /*    test_6(rtrie_nil());*/
 /*    test_7(rtrie_nil());*/
-    test_8(rtrie_nil());
+/*    test_8(rtrie_nil());*/
 /*    test_9(rtrie_nil());*/
-/*    test_10(rtrie_nil());*/
+    test_10(rtrie_nil());
     return 0;
 }
 
