@@ -62,6 +62,11 @@ bool rtrie_null(rtrie *t) {
     return t->ka == nullptr && !t->sibling && !t->link;
 }
 
+
+bool rtrie_empty(rtrie *t) {
+    return t->v == emptyptr;
+}
+
 void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
 
     assert(t);
@@ -143,11 +148,7 @@ bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l) {
 
     size_t kl = rtrie_klen(t->ka,t->ke);
 
-    char tmp[256];
-    printf("partial match '%s' '%s'\n", key, snode(tmp,256,t->ka,t->ke));
-    printf("partial       '%s'\n", snode(tmp,256,t->ka,t->ka+pl));
-
-    *l = t;
+    if( pl == kl && !rtrie_empty(t) ) *l = t;
 
     // full match
     if( len == kl && pl == kl && t->v != emptyptr ) {
@@ -447,6 +448,7 @@ bool test_10(rtrie *t) {
 
     struct q { char q[64]; } qq[] = {
          {  ".ur.ay" }
+       , {  ".moc.oob" }
 /*       , {  ".moc.abcd" }*/
 /*       , {  ".moc.elgoog.c" }*/
 /*       , {  ".moc.elgoog.a.d" }*/
@@ -482,9 +484,9 @@ int main(int _, char **__) {
 /*    test_5(rtrie_nil());*/
 /*    test_6(rtrie_nil());*/
 /*    test_7(rtrie_nil());*/
-/*    test_8(rtrie_nil());*/
+    test_8(rtrie_nil());
 /*    test_9(rtrie_nil());*/
-    test_10(rtrie_nil());
+/*    test_10(rtrie_nil());*/
     return 0;
 }
 
