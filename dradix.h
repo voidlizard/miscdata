@@ -16,6 +16,7 @@ typedef void (*rtrie_cb)(void*, char *, char *, void*);
 char* rtrie_tocstring(char *buf, size_t len, char *sa, char *se);
 bool rtrie_emptyval(void*);
 rtrie *rtrie_nil(); 
+void rtrie_free(rtrie*,void *, rtrie_cb); 
 bool rtrie_null(rtrie*); 
 void rtrie_add(rtrie*, char *, size_t, void*);
 void rtrie_bfs(rtrie*, void *, rtrie_cb); 

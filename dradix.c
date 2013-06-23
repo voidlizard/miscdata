@@ -119,6 +119,15 @@ void rtrie_dfs(rtrie *t, void *cc, rtrie_cb cb) {
     rtrie_dfs(t->sibling, cc, cb);
 }
 
+void rtrie_free(rtrie *t, void *cc, rtrie_cb cb) {
+    if( !t ) return;
+    safecall(unit, cb, cc, t->ka, t->ke, t->v);
+    rtrie_dfs(t->link, cc, cb);
+    rtrie_dfs(t->sibling, cc, cb);
+    free(t);
+}
+
+
 bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb cb) {
     char *s  = (char*)key;
 
