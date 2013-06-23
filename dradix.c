@@ -146,7 +146,7 @@ bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb
     size_t kl = rtrie_klen(t->ka,t->ke);
 
     if( pl == kl && !rtrie_empty(t) ) {
-        *l = t;
+        if( l ) *l = t;
         safecall(unit, cb, cc, t->ka, t->ke, t->v);
     }
 
