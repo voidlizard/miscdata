@@ -130,7 +130,7 @@ void rtrie_dfs(rtrie *t, void *cc, rtrie_cb cb) {
     rtrie_dfs(t->sibling, cc, cb);
 }
 
-bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l) {
+bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb cb) {
     char *s  = (char*)key;
     char *se = s + len;
 
@@ -141,35 +141,24 @@ bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l) {
     size_t pl = rtrie_prefix_len(s,t->ka,t->ke);
 
     if( !pl ) {
-        return rtrie_lookup(t->sibling, key, len, l);
+        return rtrie_lookup(t->sibling, key, len, l, cc, cb);
     } 
 
     // partial match
 
     size_t kl = rtrie_klen(t->ka,t->ke);
 
-    if( pl == kl && !rtrie_empty(t) ) *l = t;
+    if( pl == kl && !rtrie_empty(t) ) {
+        *l = t;
+        safecall(unit, cb, cc, t->ka, t->ke, t->v);
+    }
 
     // full match
     if( len == kl && pl == kl && t->v != emptyptr ) {
         return true;
     }
     
-    return rtrie_lookup(t->link, s + pl, len - pl, l);
-}
-
-void rtrie_map_prefix(rtrie *t, char *key, size_t len, void *cc, rtrie_cb cb) {
-    rtrie *n = 0;
-    size_t l = strlen(key);
-    if( rtrie_lookup(t, key, l, &n) && n ) {
-/*        char tmp[128];*/
-/*        printf("gotcha: (%s) %s\n", key, snode(tmp, 128, n->ka, n->ke));*/
-        // TODO: IF EMPTY NODE -> THEN ADD TO PATH, BUT SKIP
-        safecall(unit, cb, cc, n->ka, n->ke, t->v);
-        rtrie_dfs(n->link, cc, cb);
-/*        size_t pl = rtrie_klen(t->ka, t->ke);*/
-/*        rtrie_lookup(n->link, key + pl, l - pl, &n);*/
-    }
+    return rtrie_lookup(t->link, s + pl, len - pl, l, cc, cb);
 }
 
 bool test_1(rtrie *t) {
@@ -321,7 +310,7 @@ bool test_7(rtrie *t) {
     for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
         char k[32];
         rtrie *n = 0;
-        bool r = rtrie_lookup(t, buf[i].k, strlen(buf[i].k), &n);
+        bool r = rtrie_lookup(t, buf[i].k, strlen(buf[i].k), &n, 0, 0);
         int  v = -1;
         if( n ) {
             snode(k, sizeof(k), n->ka, n->ke);
@@ -365,8 +354,9 @@ bool test_8(rtrie *t) {
     for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
         char k[32];
         rtrie *n = 0;
-        bool r = rtrie_lookup(t, buf[i].k, strlen(buf[i].k), &n);
+        bool r = rtrie_lookup(t, buf[i].k, strlen(buf[i].k), &n, 0, 0);
         int  v = -1;
+
         if( n ) {
             snode(k, sizeof(k), n->ka, n->ke);
             v = n->v ? *(int*)n->v : -1;
@@ -391,43 +381,13 @@ void test9_scan(void *cc_, char *sa, char *se, void *v) {
     char *pe = cc->pe;
     for(; p < pe && sa < se; p++, sa++ ) *p = *sa;
     *p = 0;
-/*    char tmp[1024];*/
-/*    printf("test9_scan: (%s,)\n", snode(tmp,255,sa,se));*/
     printf("test9_scan: (%s,)\n", cc->s); //snode(tmp,255,sa,se));
 }
 
-bool test_9(rtrie *t) {
-    (void)t;
-    
-    struct kv { char k[32]; int v; } buf[] = {
-         {  "A",       1 }
-       , {  "AB",      2 }
-       , {  "ABC",     3 }
-       , {  "ABCD",    4 }
-       , {  "ABCDE",   5 }
-       , {  "ABCDEF",  6 }
-       , {  "AK",      7 }
-       , {  "AKL",     8 }
-       , {  "ABCG",    9 }
-    };
-
-    int i = 0;
-    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
-            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
-    }
-
-    char tmp[1024];
-    rtrie_bfs(t, tmp, dump_node);
-
-    printf("\n\n");
-
-    struct test9_scan_cc cc = { .s = tmp, .p = tmp, .pe = tmp + sizeof(tmp) - 1 };
-/*    rtrie_map_prefix(t, "A", strlen("A"), tmp, dump_node);*/
-    rtrie_map_prefix(t, "A", strlen("A"), &cc, test9_scan);
-
-    return false;
+void test10_cb(void *cc_, char *sa, char *se, void *v_) {
+    int v = v_ ? *(int*)v_ : -1;
+    printf("found partial match : %d\n", v);
 }
-
 
 bool test_10(rtrie *t) {
     (void)t;
@@ -463,7 +423,8 @@ bool test_10(rtrie *t) {
     for(i = 0; i < sizeof(qq)/sizeof(qq[0]); i++ ) {
         char k[64];
         rtrie *n = 0;
-        bool r = rtrie_lookup(t, qq[i].q, strlen(qq[i].q), &n);
+        printf("LOOKUP %s\n", qq[i].q);
+        bool r = rtrie_lookup(t, qq[i].q, strlen(qq[i].q), &n, 0, test10_cb);
         int  v = -1;
         if( n ) {
             snode(k, sizeof(buf), n->ka, n->ke);
@@ -471,7 +432,6 @@ bool test_10(rtrie *t) {
         }
         printf("FOUND %s: %s (%s,%d) #%ul \n", (r?"TRUE":"FALSE"), qq[i].q, k, v, n);
     }
-
 
     return false;
 }
