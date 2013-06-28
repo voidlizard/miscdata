@@ -261,6 +261,46 @@ bool test_10(rtrie *t) {
        , {  ".moc.elgoog.c" }
        , {  ".moc.elgoog.a.d" }
        , {  ".oof" }
+       , {  ".fsf.gro" }
+    };
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+    printf("\n\n");
+
+    for(i = 0; i < sizeof(qq)/sizeof(qq[0]); i++ ) {
+        char k[64];
+        rtrie *n = 0;
+        printf("LOOKUP %s\n", qq[i].q);
+        bool r = rtrie_lookup(t, qq[i].q, strlen(qq[i].q), &n, 0, test10_cb);
+        int  v = -1;
+        if( n ) {
+            rtrie_tocstring(k, sizeof(buf), n->ka, n->ke);
+            v = n->v ? *(int*)n->v : -1;
+        }
+        printf("FOUND %s: %s (%s,%d) #%ul \n", (r?"TRUE":"FALSE"), qq[i].q, k, v, n);
+    }
+
+    return false;
+}
+
+
+bool test_11(rtrie *t) {
+    (void)t;
+    
+    struct kv { char k[64]; int v; } buf[] = {
+         {  ".moc.elgoog",   1 }
+       , {  ".ur.xednay",    2 }
+       , {  ".",             3 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+    }
+
+    struct q { char q[64]; } qq[] = {
+         {  ".fsf.gro" }
     };
 
     char tmp[256];
@@ -285,15 +325,16 @@ bool test_10(rtrie *t) {
 
 
 int main(int _, char **__) {
-    test_1(rtrie_nil());
-    test_2(rtrie_nil());
-    test_3(rtrie_nil());
-    test_4(rtrie_nil());
-    test_5(rtrie_nil());
-    test_6(rtrie_nil());
-    test_7(rtrie_nil());
-    test_8(rtrie_nil());
-    test_10(rtrie_nil());
+/*    test_1(rtrie_nil());*/
+/*    test_2(rtrie_nil());*/
+/*    test_3(rtrie_nil());*/
+/*    test_4(rtrie_nil());*/
+/*    test_5(rtrie_nil());*/
+/*    test_6(rtrie_nil());*/
+/*    test_7(rtrie_nil());*/
+/*    test_8(rtrie_nil());*/
+/*    test_10(rtrie_nil());*/
+    test_11(rtrie_nil());
     return 0;
 }
 
