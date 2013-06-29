@@ -1,12 +1,21 @@
 #!/bin/sh
 tmp=`mktemp`
-./dradix-test $1 | sed -E 's/(#[[:digit:]]+l)/#PTR#/g' | sed 's/[ \t]*$//' > $tmp
+tmpvg=`mktemp`
+valgrind --tool=memcheck --leak-check=yes ./dradix-test $1 2>$tmpvg | sed -E 's/(#[[:digit:]]+l)/#PTR#/g' | sed 's/[ \t]*$//' > $tmp
 diff t/dradix/$2-baseline $tmp
 status=$?
+grep 'LEAK SUMMARY' $tmpvg > /dev/null
+mem=$?
 echo -n "TEST " $1 $2
-if [ $status -eq 0 ]; then
+#[ $mem -n 0 ] && echo "FOUND MEMORY LEAK"
+if [ $status -eq 0 -a $mem -eq 1 ]; then
 	echo " OK"
 else
-	echo " FAIL"
+	echo -n " FAIL"
+	if [ $mem -eq 0 ]; then
+		echo -n " (LEAK)"
+	fi
+	echo ""
 fi
 rm $tmp
+rm $tmpvg
