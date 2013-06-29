@@ -1,4 +1,4 @@
-.PHONY: ctags clean
+.PHONY: ctags clean baseline check
 
 all: slist dradix
 
@@ -13,4 +13,11 @@ ctags:
 
 clean:
 	rm dradix-test
-	rm slist-test 
+	rm slist-test
+
+baseline: dradix
+	./dradix-test list 2>&1 | xargs -L 1 t/dradix/mkbaseline.sh
+
+check: dradix
+	./dradix-test list 2>&1 | xargs -L 1 t/dradix/checkbaseline.sh
+

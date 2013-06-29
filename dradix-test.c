@@ -10,7 +10,7 @@ void dump_node(void *cc, char *sa, char *se, void *v);
 
 bool test_1() {
     rtrie *t = rtrie_nil();
- 
+
     struct kv { char k[32]; int v; } buf[] = {
           {  "A",   31 }
         , {  "AB",  32 }
@@ -34,7 +34,7 @@ bool test_1() {
 
 bool test_1_1() { // regression found
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
          {  "ABAK",         1 }
        , {  "AB",           2 }
@@ -59,7 +59,7 @@ bool test_1_1() { // regression found
 
 bool test_2() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
           {  "AB",     1 }
         , {  "A",      2 }
@@ -82,7 +82,7 @@ bool test_2() {
 
 bool test_3() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
           {  "AAAAK",  1 }
         , {  "AAAAKZ", 2 }
@@ -105,7 +105,7 @@ bool test_3() {
 
 bool test_4() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
            {  "AAAAB",  1 }
          , {  "JOPA",   2 }
@@ -129,7 +129,7 @@ bool test_4() {
 
 bool test_5() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
          {  "AABA", 1 }
        , {  "AAB",  2 }
@@ -154,7 +154,7 @@ bool test_5() {
 
 bool test_6() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
          {  "AC",    1 }
        , {  "AABA",  2 }
@@ -180,7 +180,7 @@ bool test_6() {
 
 bool test_7() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
          {  "JOPA",    1 }
        , {  "KITA",    2 }
@@ -212,7 +212,7 @@ bool test_7() {
 
 bool test_8() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
          {  "A",       1 }
        , {  "ABAK",    2 }
@@ -281,7 +281,7 @@ void test10_cb(void *cc_, char *sa, char *se, void *v_) {
 
 bool test_10() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[64]; int v; } buf[] = {
          {  ".",             1 }
        , {  ".moc",          2 }
@@ -332,7 +332,7 @@ bool test_10() {
 
 bool test_11() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[64]; int v; } buf[] = {
          {  ".moc.elgoog",   1 }
        , {  ".ur.xednay",    2 }
@@ -386,7 +386,7 @@ bool test_12() {
                 , "XPEH"
                 , "XPEHOBYХА"
                 };
- 
+
     rtrie_add(t, s[0], strlen(s[0]), 0);
     rtrie_add(t, s[1], strlen(s[1]), 0);
     rtrie_add(t, s[2], strlen(s[2]), 0);
@@ -404,7 +404,7 @@ bool test_12() {
 
 bool test_13() {
     rtrie *t = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
           {  "ABAK",         1 }
         , {  "ABAKAN",       2 }
@@ -445,7 +445,7 @@ bool test_14() {
     rtrie *t  = rtrie_nil();
 
     rtrie *t2 = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
           {  "AB",         1 }
         , {  "AC",         2 }
@@ -493,7 +493,7 @@ bool test_14() {
 bool test_15() {
 
     rtrie *t  = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
            {  "AB",         1 }
          , {  "AC",        -2 }
@@ -526,7 +526,7 @@ bool test_15() {
 bool test_16() {
 
     rtrie *t  = rtrie_nil();
-    
+
     struct kv { char k[32]; int v; } buf[] = {
            {  "A" ,         1 }
          , {  "AB",         2 }
@@ -563,28 +563,66 @@ bool test_16() {
     return false;
 }
 
+static struct test_ {
+    bool (*test_fun)();
+    const char *name;
+} tests[] = {
+     {  test_1,   "test_1"   }
+    ,{  test_1_1, "test_1_1" }
+    ,{  test_2,   "test_2"   }
+    ,{  test_3,   "test_3"   }
+    ,{  test_4,   "test_4"   }
+    ,{  test_5,   "test_5"   }
+    ,{  test_6,   "test_6"   }
+    ,{  test_7,   "test_7"   }
+    ,{  test_8,   "test_8"   }
+    ,{  test_10,  "test_10"  }
+    ,{  test_11,  "test_11"  }
+    ,{  test_12,  "test_12"  }
+    ,{  test_13,  "test_13"  }
+    ,{  test_14,  "test_14"  }
+    ,{  test_15,  "test_15"  }
+    ,{  test_16,  "test_16"  }
+    ,{  0,        ""         }
+};
 
-int main(int _, char **__) {
-/*    test_1();*/
-/*    test_1_1();*/
-/*    test_2();*/
-/*    test_3();*/
-/*    test_4();*/
-/*    test_5();*/
-/*    test_6();*/
-/*    test_7();*/
-/*    test_8();*/
-/*    test_10();*/
-/*    test_11();*/
-/*    test_12();*/
-/*    test_13();*/
-/*    test_14();*/
-/*    test_15();*/
-    test_16();
-    return 0;
+
+void tests_run(int n) {
+    int k = sizeof(tests)/sizeof(tests[0]);
+    int i = n >= 0 ? n % k : 0;
+    int l = n >= 0 ? i + 1 : k;
+    for(; i < l && tests[i].test_fun; i++) {
+        fprintf(stderr, "\n=== TEST STARTED  (%s)\n", tests[i].name );
+        tests[i].test_fun();
+        fprintf(stderr, "\n=== TEST FINISHED (%s)\n", tests[i].name );
+    }
 }
 
+int main(int argc, char **argv) {
 
+    if( argc < 2 ) {
+        tests_run(-1);
+        return 0;
+    }
+
+    if( !strncmp("list", argv[1], strlen("list")) ) {
+        int i = 0;
+        int k = sizeof(tests)/sizeof(tests[0]);
+        for(i = 0; i < k && tests[i].test_fun; i++) {
+            fprintf(stderr, "%3d %s\n", i, tests[i].name );
+        }
+        return 0;
+    }
+
+    char *e = argv[1];
+    long n = strtol(argv[1], &e, 10);
+    if( e > argv[1] ) {
+        tests_run(n);
+        return 0;
+    }
+
+    return -1;
+}
 
 void dump_node(void *cc, char *sa, char *se, void *v) {
     char *buf = (char*)cc;
