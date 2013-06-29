@@ -4,7 +4,7 @@
 #include <string.h>
 #include "dradix.h"
 
-static char *const nullptr = "{nil}";
+static void *const nilptr   = "{nil}";
 static void *const emptyptr = "{empty}";
 
 #define safecall(v, f, ...)  ((f) ? (f(__VA_ARGS__)) : (v))
@@ -63,9 +63,8 @@ static rtrie *rtrie_new(char *ka, char *ke, void *v, bool copy) {
     return n;
 }
 
-
 rtrie *rtrie_nil() {
-    return rtrie_new(nullptr,nullptr,emptyptr,false);
+    return rtrie_new(nilptr,nilptr+strlen(nilptr),emptyptr,false);
 }
 
 static rtrie *rtrie_assign(rtrie *t, char *ka, char *ke, void *v, bool copy) {
@@ -83,7 +82,7 @@ static rtrie *rtrie_assign(rtrie *t, char *ka, char *ke, void *v, bool copy) {
 }
 
 bool rtrie_null(rtrie *t) {
-    return t->ka == nullptr && !t->sibling && !t->link;
+    return t->ka == nilptr;
 }
 
 bool rtrie_empty(rtrie *t) {
@@ -162,14 +161,25 @@ void rtrie_dfs(rtrie *t, void *cc, rtrie_cb cb) {
 
 void rtrie_free(rtrie *t, void *cc, rtrie_cb cb) {
     if( !t ) return;
-    safecall(unit, cb, cc, t->ka, t->ke, t->v);
+
+    if( rtrie_emptyval(t->v) ) {
+        safecall(unit, cb, cc, t->ka, t->ke, t->v);
+    }
+
     if( t->link ) rtrie_free(t->link, cc, cb);
     if( t->sibling ) rtrie_free(t->sibling, cc, cb);
     free(t->keymem);
     free(t);
 }
 
-bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb cb) {
+
+static bool rtrie_lookup_with_parent( rtrie *t
+                                    , char *key
+                                    , size_t len
+                                    , rtrie **p
+                                    , rtrie **l
+                                    , void* cc
+                                    , rtrie_cb cb) {
     char *s  = (char*)key;
 
     if( !t ) {
@@ -179,7 +189,8 @@ bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb
     size_t pl = rtrie_prefix_len(s,t->ka,t->ke);
 
     if( !pl ) {
-        return rtrie_lookup(t->sibling, key, len, l, cc, cb);
+        if( p ) *p = t;
+        return rtrie_lookup_with_parent(t->sibling, key, len, p, l, cc, cb);
     } 
 
     // partial match
@@ -195,13 +206,64 @@ bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb
     if( len == kl && pl == kl && !rtrie_empty(t) ) {
         return true;
     }
-    
-    return rtrie_lookup(t->link, s + pl, len - pl, l, cc, cb);
+   
+    if( p ) *p = t;
+    return rtrie_lookup_with_parent(t->link, s + pl, len - pl, p, l, cc, cb);
+}
+
+bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb cb) {
+    return rtrie_lookup_with_parent(t,key,len,0,l,cc,cb);
 }
 
 // TODO: delete node
-// TODO: iterate with prefix
-// TODO: iterate with prefix
+void rtrie_del(rtrie *t, char *s, size_t len, void *cc, rtrie_cb clean) {
+    assert(t);
+
+    rtrie *l = 0, *p = 0;
+    if( !rtrie_lookup_with_parent(t,s,len,&p,&l,cc, 0) )
+        return;
+    
+    // cleanup node anyway
+    safecall(unit, clean, cc, l->ka, l->ke, l->v);
+    l->v = emptyptr;
+
+    if( !p ) {
+        // ... and it's root
+        if( !l->link ) {
+            free(l->keymem);
+            l->keymem = 0;
+            rtrie_assign(t, nilptr, nilptr, emptyptr, false);
+        }
+        return;
+    }
+
+    if( !l->link ) {
+        // ... and it's leaf
+        if( p->sibling == l ) {
+            p->sibling = l->sibling;
+        } else if(p->link == l) {
+            p->link = l->sibling;
+        }
+        free(l->keymem);
+        free(l);
+    } else if( !l->link->link && !l->link->sibling ) {
+        // ... and it's not leaf (try merge keys)
+        rtrie *ll = l->link;
+        size_t l1 = rtrie_klen(l->ka, l->ke);
+        size_t l2 = rtrie_klen(ll->ka, ll->ke);
+        char *b = malloc(l1+l2+1);        
+        memcpy(b,    l->ka, l1);
+        memcpy(b+l1, ll->ka, l2);
+        b[l1+l2] = 0;
+        free(l->keymem);        
+        l->keymem = b;
+        rtrie_assign(l, b, b+l1+l2, ll->v, false);
+        free(ll->keymem);
+        safecall(unit, clean, cc, ll->ka, ll->ke, ll->v);
+        free(ll);
+        l->link = 0;
+    }
+}
 
 char* rtrie_tocstring(char *buf, size_t len, char *sa, char *se) {
     char *p = buf;
@@ -211,3 +273,4 @@ char* rtrie_tocstring(char *buf, size_t len, char *sa, char *se) {
     return buf;
 }
 
+// TODO: iterate with prefix?

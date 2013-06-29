@@ -12,6 +12,5 @@ ctags:
 	ctags *.c
 
 clean:
-	rm tags
 	rm dradix-test
 	rm slist-test 

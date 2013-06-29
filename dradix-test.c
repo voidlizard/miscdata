@@ -30,6 +30,33 @@ bool test_1() {
     return false;
 }
 
+
+
+bool test_1_1() { // regression found
+    rtrie *t = rtrie_nil();
+    
+    struct kv { char k[32]; int v; } buf[] = {
+         {  "ABAK",         1 }
+       , {  "AB",           2 }
+       , {  "AB2",          3 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        if( buf[i].v > 0 ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+        }
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_free(t,0,0);
+
+    return false;
+}
+
+
 bool test_2() {
     rtrie *t = rtrie_nil();
     
@@ -375,19 +402,185 @@ bool test_12() {
 }
 
 
+bool test_13() {
+    rtrie *t = rtrie_nil();
+    
+    struct kv { char k[32]; int v; } buf[] = {
+          {  "ABAK",         1 }
+        , {  "ABAKAN",       2 }
+        , {  "ZHLOB",        3 }
+        , {  "KIT",          4 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        if( buf[i].v > 0 ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+        }
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    // removing a leaf must be easy
+    rtrie_del(t,buf[1].k,strlen(buf[1].k),0,0);
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_del(t,buf[2].k,strlen(buf[2].k),0,0);
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_free(t,0,0);
+
+    return false;
+}
+
+void test_14_cb(void *cc, char *sa, char *se, void *v) {
+    rtrie_add((rtrie*)cc, sa, se - sa, v);
+}
+
+bool test_14() {
+
+    rtrie *t  = rtrie_nil();
+
+    rtrie *t2 = rtrie_nil();
+    
+    struct kv { char k[32]; int v; } buf[] = {
+          {  "AB",         1 }
+        , {  "AC",         2 }
+        , {  "AD",         3 }
+        , {  "AE",         4 }
+        , {  "ACM",        5 }
+        , {  "ACK",        6 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        if( buf[i].v > 0 ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+        }
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_del(t,buf[2].k,strlen(buf[2].k),0,0);
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_del(t,buf[0].k,strlen(buf[0].k),0,0);
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_del(t,buf[1].k,strlen(buf[1].k),0,0);
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    printf("new trie:\n");
+
+    rtrie_dfs(t, t2, test_14_cb);
+
+    rtrie_bfs(t2, tmp, dump_node);
+
+    rtrie_free(t,0,0);
+    rtrie_free(t2,0,0);
+
+    return false;
+}
+
+
+bool test_15() {
+
+    rtrie *t  = rtrie_nil();
+    
+    struct kv { char k[32]; int v; } buf[] = {
+           {  "AB",         1 }
+         , {  "AC",        -2 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        if( buf[i].v > 0 ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+        }
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_del(t,buf[0].k,strlen(buf[0].k),0,0);
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_add(t, buf[1].k, strlen(buf[1].k), &buf[1].v);
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_free(t,0,0);
+
+    return false;
+}
+
+
+bool test_16() {
+
+    rtrie *t  = rtrie_nil();
+    
+    struct kv { char k[32]; int v; } buf[] = {
+           {  "A" ,         1 }
+         , {  "AB",         2 }
+         , {  "ABC",        3 }
+         , {  "ABCD",       4 }
+         , {  "ABCDE",      5 }
+         , {  "ABCDEF",     6 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        if( buf[i].v > 0 ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+        }
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_del(t,buf[4].k,strlen(buf[4].k),0,0);
+
+    fprintf(stdout, "\n");
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_del(t,buf[3].k,strlen(buf[3].k),0,0);
+
+    fprintf(stdout, "\n");
+
+    rtrie_bfs(t, tmp, dump_node);
+
+    rtrie_free(t,0,0);
+
+    return false;
+}
+
 
 int main(int _, char **__) {
-    test_1();
-    test_2();
-    test_3();
-    test_4();
-    test_5();
-    test_6();
-    test_7();
-    test_8();
-    test_10();
-    test_11();
-    test_12();
+/*    test_1();*/
+/*    test_1_1();*/
+/*    test_2();*/
+/*    test_3();*/
+/*    test_4();*/
+/*    test_5();*/
+/*    test_6();*/
+/*    test_7();*/
+/*    test_8();*/
+/*    test_10();*/
+/*    test_11();*/
+/*    test_12();*/
+/*    test_13();*/
+/*    test_14();*/
+/*    test_15();*/
+    test_16();
     return 0;
 }
 

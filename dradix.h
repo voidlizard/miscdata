@@ -22,6 +22,7 @@ rtrie *rtrie_nil();
 void rtrie_free(rtrie*,void *, rtrie_cb); 
 bool rtrie_null(rtrie*); 
 void rtrie_add(rtrie*, char *, size_t, void*);
+void rtrie_del(rtrie*, char *, size_t, void*, rtrie_cb);
 void rtrie_bfs(rtrie*, void *, rtrie_cb); 
 void rtrie_dfs(rtrie*, void *, rtrie_cb);
 void rtrie_bfs_with_node(rtrie*, void *, rtrie_node_cb);
