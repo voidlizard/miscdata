@@ -26,25 +26,59 @@ static size_t rtrie_prefix_len(char *s, char *ka, char *ke) {
     return pl < sl ? pl : sl;
 }
 
-static rtrie *rtrie_new(char *ka, char *ke, void *v) {
+static bool rtrie_new_key(rtrie *t, char *ka, char *ke) {
+    size_t kl = rtrie_klen(ka,ke);
+
+    if( t->keymem )
+        free(t->keymem);
+
+    t->keymem = malloc(kl+1);
+
+    if( !t->keymem ) {
+        return false;
+    }
+
+    memcpy(t->keymem,ka,kl);
+    t->keymem[kl] = 0;
+    t->ka = t->keymem;
+    t->ke = t->keymem + kl;
+    return true;
+}
+
+static rtrie *rtrie_new(char *ka, char *ke, void *v, bool copy) {
     rtrie *n = malloc(sizeof(rtrie));
     if( n ) {
         n->link = n->sibling = 0;
         n->ka = ka;
         n->ke = ke;
         n->v  = v;
+        n->keymem = 0;
+        if( copy ) {
+            if( !rtrie_new_key(n, ka, ke) ) {
+                free(n);
+                return 0;
+            }
+        }
     }
     return n;
 }
 
+
 rtrie *rtrie_nil() {
-    return rtrie_new(nullptr,nullptr,emptyptr);
+    return rtrie_new(nullptr,nullptr,emptyptr,false);
 }
 
-static rtrie *rtrie_assign(rtrie *t, char *ka, char *ke, void *v) {
+static rtrie *rtrie_assign(rtrie *t, char *ka, char *ke, void *v, bool copy) {
+    assert(t);
     t->ka = ka;
     t->ke = ke;
     t->v  = v;
+    if( copy ) {
+        if( !rtrie_new_key(t, ka, ke) ) {
+            free(t);
+            return 0;
+        }
+    }
     return t;
 }
 
@@ -66,15 +100,15 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
 
     if( ! *sa ) return; // prune empty strings
 
-    if( rtrie_null(t) ) {
-        rtrie_assign(t, sa, se, v);
+    if( rtrie_null(t) ) { // need mem to keep the key
+        rtrie_assign(t, sa, se, v, true);
         return;
     }
 
     if( !pl ) { // not a prefix
         // add at sibling
         if( !t->sibling ) {
-            rtrie *n = rtrie_new(sa, se, v);
+            rtrie *n = rtrie_new(sa, se, v, true);
             n->sibling = t->sibling;
             t->sibling = n;
             return;
@@ -89,10 +123,10 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     }
 
     if( pl < kl ) { // new node
-        rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v);
+        rtrie *n = rtrie_new(t->ka + pl, t->ke, t->v, false);  // need mem to keep the key... or it does not?
         n->link = t->link;
         t->link = n;
-        rtrie_assign(t, t->ka, t->ka + pl, emptyptr);
+        rtrie_assign(t, t->ka, t->ka + pl, emptyptr, false);
         // prune empty strings
         if( ! *(sa + pl)  ) {
             t->v = v;
@@ -103,6 +137,13 @@ void rtrie_add(rtrie *t, char *sa, size_t len, void* v) {
     if( !t->link ) t->link = rtrie_nil();
 
     rtrie_add(t->link, sa+pl, len-pl, v);
+}
+
+void rtrie_bfs_with_node(rtrie *t, void *cc, rtrie_node_cb cb) {
+    if( !t ) return;
+    safecall(unit, cb, cc, t);
+    rtrie_bfs_with_node(t->sibling, cc, cb);
+    rtrie_bfs_with_node(t->link, cc, cb);
 }
 
 void rtrie_bfs(rtrie *t, void *cc, rtrie_cb cb) {
@@ -122,11 +163,11 @@ void rtrie_dfs(rtrie *t, void *cc, rtrie_cb cb) {
 void rtrie_free(rtrie *t, void *cc, rtrie_cb cb) {
     if( !t ) return;
     safecall(unit, cb, cc, t->ka, t->ke, t->v);
-    rtrie_dfs(t->link, cc, cb);
-    rtrie_dfs(t->sibling, cc, cb);
+    if( t->link ) rtrie_free(t->link, cc, cb);
+    if( t->sibling ) rtrie_free(t->sibling, cc, cb);
+    free(t->keymem);
     free(t);
 }
-
 
 bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb cb) {
     char *s  = (char*)key;

@@ -9,9 +9,12 @@ typedef struct rtrie_ {
     char          *ka;
     char          *ke;
     void          *v;
+    char          *keymem;
 } rtrie;
 
+
 typedef void (*rtrie_cb)(void*, char *, char *, void*);
+typedef void (*rtrie_node_cb)(void*, rtrie*);
 
 char* rtrie_tocstring(char *buf, size_t len, char *sa, char *se);
 bool rtrie_emptyval(void*);
@@ -21,6 +24,7 @@ bool rtrie_null(rtrie*);
 void rtrie_add(rtrie*, char *, size_t, void*);
 void rtrie_bfs(rtrie*, void *, rtrie_cb); 
 void rtrie_dfs(rtrie*, void *, rtrie_cb);
+void rtrie_bfs_with_node(rtrie*, void *, rtrie_node_cb);
 bool rtrie_lookup(rtrie*, char *, size_t, rtrie**, void*, rtrie_cb);
 
 #endif

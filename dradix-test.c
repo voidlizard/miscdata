@@ -8,9 +8,9 @@
 
 void dump_node(void *cc, char *sa, char *se, void *v);
 
-bool test_1(rtrie *t) {
-    (void)t;
-    
+bool test_1() {
+    rtrie *t = rtrie_nil();
+ 
     struct kv { char k[32]; int v; } buf[] = {
           {  "A",   31 }
         , {  "AB",  32 }
@@ -25,11 +25,13 @@ bool test_1(rtrie *t) {
     char tmp[256];
     rtrie_bfs(t, tmp, dump_node);
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
-bool test_2(rtrie *t) {
-    (void)t;
+bool test_2() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[32]; int v; } buf[] = {
           {  "AB",     1 }
@@ -45,12 +47,14 @@ bool test_2(rtrie *t) {
     char tmp[256];
     rtrie_bfs(t, tmp, dump_node);
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
 
-bool test_3(rtrie *t) {
-    (void)t;
+bool test_3() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[32]; int v; } buf[] = {
           {  "AAAAK",  1 }
@@ -66,12 +70,14 @@ bool test_3(rtrie *t) {
     char tmp[256];
     rtrie_bfs(t, tmp, dump_node);
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
 
-bool test_4(rtrie *t) {
-    (void)t;
+bool test_4() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[32]; int v; } buf[] = {
            {  "AAAAB",  1 }
@@ -89,11 +95,13 @@ bool test_4(rtrie *t) {
     char tmp[256];
     rtrie_bfs(t, tmp, dump_node);
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
-bool test_5(rtrie *t) {
-    (void)t;
+bool test_5() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[32]; int v; } buf[] = {
          {  "AABA", 1 }
@@ -112,11 +120,13 @@ bool test_5(rtrie *t) {
     char tmp[256];
     rtrie_bfs(t, tmp, dump_node);
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
-bool test_6(rtrie *t) {
-    (void)t;
+bool test_6() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[32]; int v; } buf[] = {
          {  "AC",    1 }
@@ -135,12 +145,14 @@ bool test_6(rtrie *t) {
     char tmp[256];
     rtrie_bfs(t, tmp, dump_node);
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
 
-bool test_7(rtrie *t) {
-    (void)t;
+bool test_7() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[32]; int v; } buf[] = {
          {  "JOPA",    1 }
@@ -166,11 +178,13 @@ bool test_7(rtrie *t) {
         printf("FOUND %s: %s (%s,%d) \n", (r?"TRUE":"FALSE"), buf[i].k, k, v);
     }
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
-bool test_8(rtrie *t) {
-    (void)t;
+bool test_8() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[32]; int v; } buf[] = {
          {  "A",       1 }
@@ -211,6 +225,8 @@ bool test_8(rtrie *t) {
         printf("FOUND %s: %s (%s,%d) #%ul \n", (r?"TRUE":"FALSE"), buf[i].k, k, v, n);
     }
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
@@ -236,8 +252,8 @@ void test10_cb(void *cc_, char *sa, char *se, void *v_) {
     printf("found partial match : %d\n", v);
 }
 
-bool test_10(rtrie *t) {
-    (void)t;
+bool test_10() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[64]; int v; } buf[] = {
          {  ".",             1 }
@@ -281,12 +297,14 @@ bool test_10(rtrie *t) {
         printf("FOUND %s: %s (%s,%d) #%ul \n", (r?"TRUE":"FALSE"), qq[i].q, k, v, n);
     }
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
 
-bool test_11(rtrie *t) {
-    (void)t;
+bool test_11() {
+    rtrie *t = rtrie_nil();
     
     struct kv { char k[64]; int v; } buf[] = {
          {  ".moc.elgoog",   1 }
@@ -320,21 +338,56 @@ bool test_11(rtrie *t) {
         printf("FOUND %s: %s (%s,%d) #%ul \n", (r?"TRUE":"FALSE"), qq[i].q, k, v, n);
     }
 
+    rtrie_free(t,0,0);
+
     return false;
 }
 
 
+
+void test_12_cb(void *cc, rtrie *t) {
+    printf("node#%ul\n", t);
+}
+
+bool test_12() {
+    rtrie *t = rtrie_nil();
+
+    char *s[] = { "ABAK"
+                , "ZHABA"
+                , "ABAKAN"
+                , "ABA"
+                , "XPEH"
+                , "XPEHOBYХА"
+                };
+ 
+    rtrie_add(t, s[0], strlen(s[0]), 0);
+    rtrie_add(t, s[1], strlen(s[1]), 0);
+    rtrie_add(t, s[2], strlen(s[2]), 0);
+    rtrie_add(t, s[3], strlen(s[3]), 0);
+    rtrie_add(t, s[4], strlen(s[4]), 0);
+    rtrie_add(t, s[5], strlen(s[5]), 0);
+
+    rtrie_bfs_with_node(t,0,test_12_cb);
+
+    rtrie_free(t,0,0);
+
+    return false;
+}
+
+
+
 int main(int _, char **__) {
-/*    test_1(rtrie_nil());*/
-/*    test_2(rtrie_nil());*/
-/*    test_3(rtrie_nil());*/
-/*    test_4(rtrie_nil());*/
-/*    test_5(rtrie_nil());*/
-/*    test_6(rtrie_nil());*/
-/*    test_7(rtrie_nil());*/
-/*    test_8(rtrie_nil());*/
-/*    test_10(rtrie_nil());*/
-    test_11(rtrie_nil());
+    test_1();
+    test_2();
+    test_3();
+    test_4();
+    test_5();
+    test_6();
+    test_7();
+    test_8();
+    test_10();
+    test_11();
+    test_12();
     return 0;
 }
 
