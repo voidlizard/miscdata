@@ -8,7 +8,8 @@ typedef struct slist_ {
     char value[0];
 } slist;
 
-size_t slist_size(size_t psize); 
+#define slist_size(psize) ((psize) + sizeof(slist*))
+
 slist* slist_cons(slist *x, slist *xs);
 slist* slist_uncons(slist **xs); 
 slist* slist_pool(void *mem, size_t chunk_size, size_t size); 

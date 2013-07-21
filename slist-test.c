@@ -13,7 +13,6 @@ void init_char(void *cc, char *value) {
     *value = *c;
 }
 
-
 int main(int _, char **__) {
     char pool[256 * slist_size(sizeof(char))];
     slist *free = slist_pool(pool, slist_size(sizeof(char)), sizeof(pool));

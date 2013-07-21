@@ -1,10 +1,5 @@
 #include <assert.h>
-
 #include "slist.h"
-
-size_t slist_size(size_t psize) {
-    return psize + sizeof(slist*);
-}
 
 static slist *__slist_nil = 0;
 
@@ -29,10 +24,12 @@ slist* slist_pool(void *mem, size_t chunk_size, size_t size) {
     size_t chunks = size / chunk_size;
     char *p  = (char*)mem;
     char *pe = (char*)mem + chunks*chunk_size;
-    slist *pool = (slist*)slist_nil;
+
+    slist *pool = slist_nil();
     for(; p < pe; p += chunk_size ) {
         pool = slist_cons((slist*)p, pool);
     }
+
     return pool;
 }
 
