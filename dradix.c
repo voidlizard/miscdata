@@ -172,7 +172,6 @@ void rtrie_free(rtrie *t, void *cc, rtrie_cb cb) {
     free(t);
 }
 
-
 static bool rtrie_lookup_with_parent( rtrie *t
                                     , char *key
                                     , size_t len
@@ -182,7 +181,7 @@ static bool rtrie_lookup_with_parent( rtrie *t
                                     , rtrie_cb cb) {
     char *s  = (char*)key;
 
-    if( !t ) {
+    if( !t || !*key ) {
         return false;
     }
 
@@ -214,6 +213,11 @@ static bool rtrie_lookup_with_parent( rtrie *t
 bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb cb) {
     return rtrie_lookup_with_parent(t,key,len,0,l,cc,cb);
 }
+
+
+
+
+
 
 // TODO: delete node
 void rtrie_del(rtrie *t, char *s, size_t len, void *cc, rtrie_cb clean) {

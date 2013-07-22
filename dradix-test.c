@@ -564,6 +564,50 @@ bool test_16() {
     return false;
 }
 
+
+void test17_cb(void *cc_, char *sa, char *se, void *v_) {
+    int v = v_ ? *(int*)v_ : -1;
+    printf("found partial match : %d\n", v);
+}
+
+bool test_17() {
+
+    rtrie *t  = rtrie_nil();
+
+    struct kv { char k[32]; int v; } buf[] = {
+        { ".moc"             , 1 }
+      , { ".moc.elgoog"      , 2 }
+      , { ".moc.elgoog.tset" , 3 }
+      , { "."                , 10}
+      , { ".ur"              ,-2 }
+      , { ".moc.wtf"         ,-3 }
+    };
+
+    int i = 0;
+    for(i = 0; i < sizeof(buf)/sizeof(buf[0]); i++ ) {
+        if( buf[i].v > 0 ) {
+            rtrie_add(t, buf[i].k, strlen(buf[i].k), &buf[i].v);
+        }
+    }
+
+    char tmp[256];
+    rtrie_bfs(t, tmp, dump_node);
+    
+    rtrie *n = 0;
+    char key[] = ".moc.elgoog.tset.4a";
+    char kl    = strlen(key);
+
+    bool r = rtrie_lookup(t, key, kl, &n, 0, test17_cb);
+    int v = n && n->v ? *(int*)n->v : -1;
+    fprintf(stdout, "%sFOUND MATCH %d\n", !r?"NOT ":"", v);
+
+    rtrie_free(t,0,0);
+
+    return false;
+}
+
+
+
 static struct test_ {
     bool (*test_fun)();
     const char *name;
@@ -584,6 +628,7 @@ static struct test_ {
     ,{  test_14,  "test_14"  }
     ,{  test_15,  "test_15"  }
     ,{  test_16,  "test_16"  }
+    ,{  test_17,  "test_17"  }
     ,{  0,        ""         }
 };
 
