@@ -214,11 +214,6 @@ bool rtrie_lookup(rtrie *t, char *key, size_t len, rtrie **l, void* cc, rtrie_cb
     return rtrie_lookup_with_parent(t,key,len,0,l,cc,cb);
 }
 
-
-
-
-
-
 // TODO: delete node
 void rtrie_del(rtrie *t, char *s, size_t len, void *cc, rtrie_cb clean) {
     assert(t);

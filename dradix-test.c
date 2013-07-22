@@ -568,6 +568,8 @@ bool test_16() {
 void test17_cb(void *cc_, char *sa, char *se, void *v_) {
     int v = v_ ? *(int*)v_ : -1;
     printf("found partial match : %d\n", v);
+/*    char buf[128];*/
+/*    fprintf(stdout, "%s\n", rtrie_tocstring(buf,128,sa,se));*/
 }
 
 bool test_17() {
