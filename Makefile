@@ -8,6 +8,10 @@ dradix:
 slist:
 	gcc -g -Wall ./slist.c ./slist-test.c -o slist-test
 
+
+hash:
+	gcc -g -Wall ./slist.c ./hash-test.c -o hash-test
+
 ctags:
 	ctags *.c
 

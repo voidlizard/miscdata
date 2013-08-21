@@ -36,7 +36,7 @@ slist* slist_pool(void *mem, size_t chunk_size, size_t size) {
 slist* slist_alloc(slist **pool, void *cc, void (*init)(void*, char*)) {
     slist *tmp = slist_uncons(pool);
     if(!tmp) return 0;
-    tmp->next = (slist*)slist_nil;
+    tmp->next = (slist*)slist_nil();
     if(init) init(cc, tmp->value);
     return tmp;
 }
