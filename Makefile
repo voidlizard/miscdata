@@ -1,27 +1,29 @@
 .PHONY: ctags clean baseline check
 
-all: slist dradix
+TESTSRC=dradix-test.c hash-test.c
 
-dradix:
-	gcc -g -Wall ./dradix.c ./dradix-test.c -o dradix-test
+SOURCES=slist.c dradix.c hash.c hash-test.c dradix-test.c test-suite.c
 
-slist:
-	gcc -g -Wall ./slist.c ./slist-test.c -o slist-test
+all: build-tests
 
-
-hash:
-	gcc -g -Wall ./slist.c ./hash-test.c -o hash-test
+build-tests:
+	echo "#ifndef __all_tests_h" > t/test-suite.h
+	echo "#define __all_tests_h" >> t/test-suite.h
+	echo $(TESTSRC)
+	cat $(TESTSRC) | egrep -o 'void\s+test_.*\s*\(\s*void\s*\)' | awk '{printf("%s %s;\n",$$1,$$2)}' >> t/test-suite.h
+	echo "#endif" >> t/test-suite.h
+	gcc -g -Wall $(SOURCES) -o test-suite
 
 ctags:
 	ctags *.c
 
 clean:
-	rm dradix-test
-	rm slist-test
+	rm test-suite
+	rm t/*.h
 
-baseline: dradix
-	./dradix-test list 2>&1 | xargs -L 1 t/dradix/mkbaseline.sh
+baseline: build-tests
+	./test-suite list 2>&1 | xargs -L 1 t/scripts/mkbaseline.sh
 
-check: dradix
-	./dradix-test list 2>&1 | xargs -L 1 t/dradix/checkbaseline.sh
+check: build-tests
+	./test-suite list 2>&1 | xargs -L 1 t/scripts/checkbaseline.sh
 

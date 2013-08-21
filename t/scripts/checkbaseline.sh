@@ -1,8 +1,8 @@
 #!/bin/sh
 tmp=`mktemp`
 tmpvg=`mktemp`
-valgrind --tool=memcheck --leak-check=yes ./dradix-test $1 2>$tmpvg | sed -E 's/(#[[:digit:]]+l)/#PTR#/g' | sed 's/[ \t]*$//' > $tmp
-diff t/dradix/$2-baseline $tmp
+valgrind --tool=memcheck --leak-check=yes ./test-suite $1 2>$tmpvg | sed -E 's/(#[[:digit:]]+l)/#PTR#/g' | sed 's/[ \t]*$//' > $tmp
+diff t/baseline/$1-baseline $tmp
 status=$?
 grep 'LEAK SUMMARY' $tmpvg > /dev/null
 mem=$?

@@ -9,7 +9,7 @@
 
 void dump_node(void *cc, char *sa, char *se, void *v);
 
-bool test_1() {
+void test_dradix_1(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -27,13 +27,11 @@ bool test_1() {
     rtrie_bfs(t, tmp, dump_node);
 
     rtrie_free(t,0,0);
-
-    return false;
 }
 
 
 
-bool test_1_1() { // regression found
+void test_dradix_1_1(void) { // regression found
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -53,12 +51,10 @@ bool test_1_1() { // regression found
     rtrie_bfs(t, tmp, dump_node);
 
     rtrie_free(t,0,0);
-
-    return false;
 }
 
 
-bool test_2() {
+void test_dradix_2(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -77,11 +73,10 @@ bool test_2() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
-bool test_3() {
+void test_dradix_3(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -100,11 +95,10 @@ bool test_3() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
-bool test_4() {
+void test_dradix_4(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -125,10 +119,9 @@ bool test_4() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
-bool test_5() {
+void test_dradix_5(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -150,10 +143,9 @@ bool test_5() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
-bool test_6() {
+void test_dradix_6(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -175,11 +167,10 @@ bool test_6() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
-bool test_7() {
+void test_dradix_7(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -208,10 +199,9 @@ bool test_7() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
-bool test_8() {
+void test_dradix_8(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -255,7 +245,6 @@ bool test_8() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
@@ -280,7 +269,7 @@ void test10_cb(void *cc_, char *sa, char *se, void *v_) {
     printf("found partial match : %d\n", v);
 }
 
-bool test_10() {
+void test_dradix_10(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[64]; int v; } buf[] = {
@@ -327,11 +316,10 @@ bool test_10() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
-bool test_11() {
+void test_dradix_11(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[64]; int v; } buf[] = {
@@ -367,17 +355,15 @@ bool test_11() {
     }
 
     rtrie_free(t,0,0);
-
-    return false;
 }
 
 
 
-void test_12_cb(void *cc, rtrie *t) {
+void test_dradix_12_cb(void *cc, rtrie *t) {
     printf("node#%ul\n", t);
 }
 
-bool test_12() {
+void test_dradix_12(void) {
     rtrie *t = rtrie_nil();
 
     char *s[] = { "ABAK"
@@ -395,15 +381,13 @@ bool test_12() {
     rtrie_add(t, s[4], strlen(s[4]), 0);
     rtrie_add(t, s[5], strlen(s[5]), 0);
 
-    rtrie_bfs_with_node(t,0,test_12_cb);
+    rtrie_bfs_with_node(t,0,test_dradix_12_cb);
 
     rtrie_free(t,0,0);
-
-    return false;
 }
 
 
-bool test_13() {
+void test_dradix_13(void) {
     rtrie *t = rtrie_nil();
 
     struct kv { char k[32]; int v; } buf[] = {
@@ -434,14 +418,13 @@ bool test_13() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
-void test_14_cb(void *cc, char *sa, char *se, void *v) {
+void test_dradix_14_cb(void *cc, char *sa, char *se, void *v) {
     rtrie_add((rtrie*)cc, sa, se - sa, v);
 }
 
-bool test_14() {
+void test_dradix_14(void) {
 
     rtrie *t  = rtrie_nil();
 
@@ -480,18 +463,16 @@ bool test_14() {
 
     printf("new trie:\n");
 
-    rtrie_dfs(t, t2, test_14_cb);
+    rtrie_dfs(t, t2, test_dradix_14_cb);
 
     rtrie_bfs(t2, tmp, dump_node);
 
     rtrie_free(t,0,0);
     rtrie_free(t2,0,0);
-
-    return false;
 }
 
 
-bool test_15() {
+void test_dradix_15(void) {
 
     rtrie *t  = rtrie_nil();
 
@@ -520,11 +501,10 @@ bool test_15() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
-bool test_16() {
+void test_dradix_16(void) {
 
     rtrie *t  = rtrie_nil();
 
@@ -561,7 +541,6 @@ bool test_16() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
@@ -572,7 +551,7 @@ void test17_cb(void *cc_, char *sa, char *se, void *v_) {
 /*    fprintf(stdout, "%s\n", rtrie_tocstring(buf,128,sa,se));*/
 }
 
-bool test_17() {
+void test_dradix_17(void) {
 
     rtrie *t  = rtrie_nil();
 
@@ -605,72 +584,9 @@ bool test_17() {
 
     rtrie_free(t,0,0);
 
-    return false;
 }
 
 
-
-static struct test_ {
-    bool (*test_fun)();
-    const char *name;
-} tests[] = {
-     {  test_1,   "test_1"   }
-    ,{  test_1_1, "test_1_1" }
-    ,{  test_2,   "test_2"   }
-    ,{  test_3,   "test_3"   }
-    ,{  test_4,   "test_4"   }
-    ,{  test_5,   "test_5"   }
-    ,{  test_6,   "test_6"   }
-    ,{  test_7,   "test_7"   }
-    ,{  test_8,   "test_8"   }
-    ,{  test_10,  "test_10"  }
-    ,{  test_11,  "test_11"  }
-    ,{  test_12,  "test_12"  }
-    ,{  test_13,  "test_13"  }
-    ,{  test_14,  "test_14"  }
-    ,{  test_15,  "test_15"  }
-    ,{  test_16,  "test_16"  }
-    ,{  test_17,  "test_17"  }
-    ,{  0,        ""         }
-};
-
-
-void tests_run(int n) {
-    int k = sizeof(tests)/sizeof(tests[0]);
-    int i = n >= 0 ? n % k : 0;
-    int l = n >= 0 ? i + 1 : k;
-    for(; i < l && tests[i].test_fun; i++) {
-        fprintf(stderr, "\n=== TEST STARTED  (%s)\n", tests[i].name );
-        tests[i].test_fun();
-        fprintf(stderr, "\n=== TEST FINISHED (%s)\n", tests[i].name );
-    }
-}
-
-int main(int argc, char **argv) {
-
-    if( argc < 2 ) {
-        tests_run(-1);
-        return 0;
-    }
-
-    if( !strncmp("list", argv[1], strlen("list")) ) {
-        int i = 0;
-        int k = sizeof(tests)/sizeof(tests[0]);
-        for(i = 0; i < k && tests[i].test_fun; i++) {
-            fprintf(stderr, "%3d %s\n", i, tests[i].name );
-        }
-        return 0;
-    }
-
-    char *e = argv[1];
-    long n = strtol(argv[1], &e, 10);
-    if( e > argv[1] ) {
-        tests_run(n);
-        return 0;
-    }
-
-    return -1;
-}
 
 void dump_node(void *cc, char *sa, char *se, void *v) {
     char *buf = (char*)cc;
