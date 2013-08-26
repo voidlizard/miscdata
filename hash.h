@@ -18,6 +18,16 @@ struct hash* hash_create( void  *mem
 
 bool hash_add(struct hash *c, void *k, void *v);
 void *hash_get(struct hash *c, void *k);
-void hash_enum_items(struct hash *c, void (*cb)(void *k, void *v));
+
+bool hash_alter(  struct hash* c
+                , bool add
+                , void *k
+                , void *ctx
+                , void (*) (void*, void*, void*) );
+
+
+void hash_enum_items( struct hash *c
+                     , void *cc
+                     , void (*)(void *, void *, void *));
 
 #endif

@@ -6,7 +6,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-
 uint32_t u64hash(void *k) {
     uint64_t v = *(uint64_t*)k;
     uint32_t h = v;
@@ -144,4 +143,78 @@ void test_hash_create_2(void) {
     }
     fprintf(stdout, "??? new entries added: %u\n", (k-i));
 }
+
+static void set_num(void *cc, void *k, void *v) {
+    *((size_t*)v) = *((size_t*)cc);
+}
+
+static void add_100(void *cc, void *k, void *v) {
+    *((size_t*)v) += 100;
+}
+
+static void dump_item(void *cc, void *k, void *v) {
+    fprintf( stdout
+           , "??? %s %u\n"
+           , (char*)k
+           , (uint32_t)(*(uint64_t*)v)
+           );
+}
+
+void test_hash_alter_1(void) {
+    static char mem[2048];
+    char tmp[32];
+    struct hash *c = hash_create( mem
+                                , sizeof(mem)
+                                , sizeof(char[32])
+                                , sizeof(uint64_t)
+                                , shash
+                                , scmp32
+                                , scpy32
+                                , u64cpy);
+
+
+    assert( c );
+
+    size_t i = 0;
+    for(;;i++) {
+        snprintf(tmp, sizeof(tmp), "K%d", i);
+        if( !hash_alter(c, true, tmp, &i, set_num) ) break;
+        fprintf(stdout, "??? %s %u\n", tmp, i);
+    }
+
+    fprintf(stdout, "??? enum items\n");
+    hash_enum_items(c, 0, dump_item);
+
+    fprintf(stdout, "??? add 100 to evens\n");
+    size_t j = 0;
+    for(;j < i + 100;j+=2) {
+        snprintf(tmp, sizeof(tmp), "K%d", j);
+        hash_alter(c, false, tmp, &i, add_100);
+    }
+
+    hash_enum_items(c, 0, dump_item);
+
+    fprintf(stdout, "??? del K15 and K16\n");
+
+    snprintf(tmp, sizeof(tmp), "K%d", 15);
+    hash_del(c, tmp);
+
+    snprintf(tmp, sizeof(tmp), "K%d", 16);
+    hash_del(c, tmp);
+
+    hash_enum_items(c, 0, dump_item);
+
+
+    fprintf(stdout, "??? alter K15 and K16\n");
+    size_t v = 15;
+    snprintf(tmp, sizeof(tmp), "K%d", 15);
+    hash_alter(c, false, tmp, &v, set_num);
+
+    snprintf(tmp, sizeof(tmp), "K%d", 16);
+    v = 16;
+    hash_alter(c, true, tmp, &v, set_num);
+
+    hash_enum_items(c, 0, dump_item);
+}
+
 

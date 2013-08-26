@@ -33,12 +33,6 @@ size_t __hash_entry_len(struct hash *c) {
     return c->keysize + c->valsize;
 }
 
-void __hash_init_chunk(struct hash *c, void *chunk, void *key, void *value) {
-    char *p = chunk;
-    safecall(unit, c->keycopy, &p[0], key);
-    safecall(unit, c->valcopy, &p[c->keysize], value);
-}
-
 void *__hash_key(struct hash *c, void *chunk) {
     return &((char*)chunk)[0];
 }
@@ -83,7 +77,7 @@ struct hash* hash_create( void  *mem
     return c;
 }
 
-void *hash_get(struct hash *c, void *k) {
+static inline slist* __hash_find(struct hash *c, void *k) {
     assert(c);
 
     const size_t idx = HASH(safecall(0, c->hashfun, k));
@@ -94,14 +88,22 @@ void *hash_get(struct hash *c, void *k) {
     slist *it = c->buckets[idx];
     for(; it; it = it->next ) {
         if( c->keycmp(k, __hash_key(c, it->value)) ) {
-            return __hash_val(c, it->value);
+            return it;
         }
     }
 
     return 0;
 }
 
-void hash_enum_items(struct hash *c, void (*cb)(void *k, void *v)) {
+void *hash_get(struct hash *c, void *k) {
+    assert(c);
+    const slist *it = __hash_find(c, k);
+    return it ? __hash_val(c, it->value) : 0;
+}
+
+void hash_enum_items( struct hash *c
+                    , void *cc
+                    , void (*cb)(void *, void *, void *)) {
     assert(c);
 
     size_t idx = 0;
@@ -110,23 +112,36 @@ void hash_enum_items(struct hash *c, void (*cb)(void *k, void *v)) {
         for(; it; it = it->next ) {
             safecall( unit
                     , cb
+                    , cc
                     , __hash_key(c, it->value)
                     , __hash_val(c, it->value));
         }
     }
 }
 
-bool hash_add(struct hash* c, void *k, void *v) {
+static inline slist *__hash_add_entry(struct hash *c, void *k) {
     assert(c);
 
     size_t idx = HASH(safecall(0, c->hashfun, k));
 
     slist *it = slist_uncons(&c->free);
 
+    if( !it ) return 0;
+
+    c->buckets[idx] = slist_cons(it, c->buckets[idx]);
+
+    safecall(unit, c->keycopy, __hash_key(c,it->value), k);
+
+    return it;
+}
+
+
+bool hash_add(struct hash* c, void *k, void *v) {
+    slist *it = __hash_add_entry(c,k);
+
     if( !it ) return false;
 
-    __hash_init_chunk(c, it->value, k, v);
-    c->buckets[idx] = slist_cons(it, c->buckets[idx]);
+    safecall(unit, c->valcopy, __hash_val(c,it->value), v);
 
     return true;
 }
@@ -145,3 +160,28 @@ void hash_del( struct hash *c, void *k) {
     }
     c->buckets[idx] = lnew;
 }
+
+bool hash_alter(  struct hash* c
+                , bool add
+                , void *k
+                , void *cc
+                , void (*cb) (void *, void *, void *) ) {
+
+    assert(c);
+    slist *it = __hash_find(c, k);
+
+    if( !it && add ) {
+        it = __hash_add_entry(c,k);
+    }
+
+    if( !it ) return false;
+
+    safecall( unit
+            , cb
+            , cc
+            , __hash_key(c, it->value)
+            , __hash_val(c, it->value));
+
+    return true;
+}
+
