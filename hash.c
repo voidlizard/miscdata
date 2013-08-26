@@ -86,7 +86,7 @@ struct hash* hash_create( void  *mem
 void *hash_get(struct hash *c, void *k) {
     assert(c);
 
-    size_t idx = HASH(safecall(0, c->hashfun, k));
+    const size_t idx = HASH(safecall(0, c->hashfun, k));
 
     if( !c->buckets[idx] )
         return 0;
@@ -99,6 +99,21 @@ void *hash_get(struct hash *c, void *k) {
     }
 
     return 0;
+}
+
+void hash_enum_items(struct hash *c, void (*cb)(void *k, void *v)) {
+    assert(c);
+
+    size_t idx = 0;
+    for( idx = 0; idx < HASH_BUCKETS; idx++ ) {
+        slist *it = c->buckets[idx];
+        for(; it; it = it->next ) {
+            safecall( unit
+                    , cb
+                    , __hash_key(c, it->value)
+                    , __hash_val(c, it->value));
+        }
+    }
 }
 
 bool hash_add(struct hash* c, void *k, void *v) {
