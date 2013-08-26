@@ -30,6 +30,7 @@ static struct test_ {
     ,{  test_hash_create_1, "test_hash_create_1"  }
     ,{  test_hash_create_2, "test_hash_create_2 (str key)" }
     ,{  test_hash_alter_1, "test_hash_alter_1" }
+    ,{  test_hash_filter_1, "test_hash_filter_1" }
     ,{  0,        ""         }
 };
 

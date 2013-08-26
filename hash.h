@@ -30,4 +30,9 @@ void hash_enum_items( struct hash *c
                      , void *cc
                      , void (*)(void *, void *, void *));
 
+
+void hash_filter_items( struct hash *c
+                      , void *cc
+                      , bool (*cb)(void *, void *, void *));
+
 #endif

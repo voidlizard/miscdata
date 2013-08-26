@@ -119,6 +119,32 @@ void hash_enum_items( struct hash *c
     }
 }
 
+void hash_filter_items( struct hash *c
+                      , void *cc
+                      , bool (*cb)(void *, void *, void *)) {
+    assert(c);
+
+    size_t idx = 0;
+    for( idx = 0; idx < HASH_BUCKETS; idx++ ) {
+        slist *lnew = slist_nil();
+        for(; c->buckets[idx]; ) {
+            slist *it=slist_uncons(&c->buckets[idx]);
+            bool leave = safecall( false
+                                 , cb
+                                 , cc
+                                 , __hash_key(c, it->value)
+                                 , __hash_val(c, it->value));
+            if( leave ) {
+                lnew = slist_cons(it, lnew);
+            } else {
+                c->free = slist_cons(it, c->free);
+            }
+        }
+        c->buckets[idx] = lnew;
+    }
+}
+
+
 static inline slist *__hash_add_entry(struct hash *c, void *k) {
     assert(c);
 

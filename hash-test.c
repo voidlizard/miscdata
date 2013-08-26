@@ -218,3 +218,49 @@ void test_hash_alter_1(void) {
 }
 
 
+
+static void dump_int_int(void *cc, void *k, void *v) {
+    fprintf( stdout
+           , "??? %u %u\n"
+           , (uint32_t)(*(uint64_t*)k)
+           , (uint32_t)(*(uint64_t*)v)
+           );
+}
+
+static bool filt_even_keys(void *cc, void *k, void *v) {
+    return  (0 == (*(uint64_t*)k) % 2);
+}
+
+void test_hash_filter_1(void) {
+    static char mem[2048];
+    struct hash *c = hash_create( mem
+                                , sizeof(mem)
+                                , sizeof(uint64_t)
+                                , sizeof(uint64_t)
+                                , u64hash
+                                , u64cmp
+                                , u64cpy
+                                , u64cpy );
+
+    fprintf(stdout, "??? hash create %s\n", c ? "succeed" : "failed");
+
+    assert(c);
+
+    uint64_t i = 0;
+    for(;; i++) {
+        uint64_t tmp = i+1000;
+        if( !hash_add(c, &i, &tmp) ) break;
+    }
+
+    fprintf(stdout, "??? hash items added: %u\n", (unsigned int)i);
+
+    hash_enum_items(c, 0, dump_int_int);
+
+    fprintf(stdout, "??? del odd values\n");
+
+    hash_filter_items(c, 0, filt_even_keys);
+
+    hash_enum_items(c, 0, dump_int_int);
+}
+
+
