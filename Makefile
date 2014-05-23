@@ -1,8 +1,8 @@
 .PHONY: ctags clean baseline check
 
-TESTSRC=dradix-test.c hash-test.c
+TESTSRC=dradix-test.c hash-test.c slist-test.c
 
-SOURCES=slist.c dradix.c hash.c hash-test.c dradix-test.c test-suite.c
+SOURCES=slist.c dradix.c hash.c hash-test.c dradix-test.c slist-test.c test-suite.c
 
 all: build-tests
 

@@ -10,7 +10,9 @@ static struct test_ {
     void (*test_fun)(void);
     const char *name;
 } tests[] = {
-     {  test_dradix_1,   "test_dradix_1"   }
+     {  test_slist_1,    "test_slist_1"    }
+    ,{  test_slist_2,    "test_slist_2"    }
+    ,{  test_dradix_1,   "test_dradix_1"   }
     ,{  test_dradix_1_1, "test_dradix_1_1" }
     ,{  test_dradix_2,   "test_dradix_2"   }
     ,{  test_dradix_3,   "test_dradix_3"   }
@@ -31,6 +33,14 @@ static struct test_ {
     ,{  test_hash_create_2, "test_hash_create_2 (str key)" }
     ,{  test_hash_alter_1, "test_hash_alter_1" }
     ,{  test_hash_filter_1, "test_hash_filter_1" }
+    ,{  test_dradix_18,  "test_dradix_18"  }
+    ,{  test_slist_filt_destructive_1,  "test_slist_filt_destructive_1" }
+    ,{  test_slist_filt_destructive_2,  "test_slist_filt_destructive_2" }
+    ,{  test_slist_partition_destructive_1,  "test_slist_partition_destructive_1" }
+    ,{  test_hash_grow_1,  "test_hash_grow_1" }
+    ,{  test_hash_shrink_1,"test_hash_shrink_1" }
+    ,{  test_hash_bad_1,"test_hash_bad_1" }
+    ,{  test_hash_find_1,"test_hash_find_1" }
     ,{  0,        ""         }
 };
 
