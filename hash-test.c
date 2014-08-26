@@ -488,7 +488,7 @@ void test_hash_shrink_1(void)
     hash_filter_items(c, &tmp, filt_gt_eq);
 
     hash_shrink(c, 0, __dealloc_chunk);
-    
+
     fprintf(stdout, "exhausted: %s\n", hash_exhausted(c) ? "yes" : "no");
 
     for( ; ; i++ ) {
@@ -605,6 +605,132 @@ void test_hash_find_1(void)
     hash_find(c, &i, &i, test_hash_find_1_cb);
 
 }
+
+void test_hash_get_add_1_cb(void *cc, void *k_, void *v_) {
+    uint64_t *k = (uint64_t*)k_;
+    uint64_t *v = (uint64_t*)v_;
+
+    fprintf( stdout
+           , "hash_item %zu %zu\n"
+           , *k
+           , *v );
+}
+
+void test_hash_get_add_1(void)
+{
+    static char mem[4096];
+    struct hash *c = hash_create( mem
+                                , sizeof(mem)
+                                , sizeof(uint64_t)
+                                , sizeof(uint64_t)
+                                , u64hash
+                                , u64cmp
+                                , u64cpy
+                                , u64cpy);
+
+    fprintf( stdout, "??? hash create %s\n"
+           , c != NULL ? "succeed" : "failed");
+
+    if( c == NULL ) {
+        return;
+    }
+
+    uint64_t i = 0, j = 0;
+
+    for( ; j < 50; j++, i += 10 ) {
+        uint64_t  *v = hash_get_add(c, &j, &i);
+        if( !v ) {
+            break;
+        }
+    }
+
+    hash_enum_items(c, 0, test_hash_get_add_1_cb);
+
+    for( j = 0; j < 50; j++) {
+        uint64_t  *v = hash_get_add(c, &j, &i);
+        if( !v ) {
+            break;
+        }
+        *v = j;
+    }
+
+    fprintf(stdout, "\n\n");
+    hash_enum_items(c, 0, test_hash_get_add_1_cb);
+
+}
+
+static void *__test_hash_autogrow_alloc(void *cc, size_t len) {
+    (void)cc;
+    return malloc(len);
+}
+
+static void __test_hash_autogrow_dealloc(void *cc, void *mem) {
+    (void)cc;
+    free(mem);
+}
+
+void test_hash_autogrow_1(void)
+{
+    static char mem[1024];
+    struct hash *c = hash_create( mem
+                                , sizeof(mem)
+                                , sizeof(uint64_t)
+                                , sizeof(uint64_t)
+                                , u64hash
+                                , u64cmp
+                                , u64cpy
+                                , u64cpy );
+
+    fprintf(stdout, "??? hash create %s\n", c ? "succeed" : "failed");
+
+    assert(c);
+
+    uint64_t i = 0;
+    uint64_t l1 = 0;
+
+    for( ; ; i++ ) {
+        uint64_t tmp = i + 1000;
+
+        if( !hash_add(c, &i, &tmp) ) {
+            break;
+        }
+    }
+
+    l1 = i;
+
+    fprintf(stdout, "??? hash items added: %" PRIu64 "\n", i);
+
+    hash_enum_items(c, NULL, dump_int_int);
+
+    hash_set_autogrow( c
+                     , 0
+                     , 0
+                     , __test_hash_autogrow_alloc
+                     , __test_hash_autogrow_dealloc);
+
+
+    uint64_t n = 0;
+    for( ; n < 10000; i++, n++ ) {
+        uint64_t tmp = i + 1000;
+
+        if( !hash_add(c, &i, &tmp) ) {
+            break;
+        }
+    }
+
+    fprintf(stdout, "extra items added: %zu\n", n);
+
+    for(; i >= l1; i-- ) {
+        hash_del(c, &i);
+    }
+
+    fprintf(stdout, "extra items removed\n");
+
+    hash_enum_items(c, NULL, dump_int_int);
+    hash_auto_shrink(c);
+
+}
+
 
 
 

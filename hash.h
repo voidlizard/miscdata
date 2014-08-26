@@ -53,5 +53,22 @@ void hash_filter_items( struct hash *c
                       , void *cc
                       , bool (*cb)(void *, void *, void *));
 
+
+void *hash_get_add(struct hash *c, void *k, void *v);
+
+
+void hash_memory_info( struct hash *c
+                     , size_t *chunk_hdr_size
+                     , size_t *item_size
+                     );
+
+void hash_set_autogrow( struct hash*
+                      , size_t
+                      , void *
+                      , void *(*alloc)(void *, size_t)
+                      , void (*dealloc)(void*, void *));
+
+void hash_auto_shrink(struct hash *);
+
 #endif
 

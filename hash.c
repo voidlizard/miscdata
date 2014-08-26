@@ -27,6 +27,9 @@ struct hash {
     bool     (*keycmp)(void *, void *);
     void     (*keycopy)(void *, void *);
     void     (*valcopy)(void *, void *);
+    void      *alloc_cc;
+    void     *(*alloc_fn)(void*,size_t);
+    void      (*dealloc_fn)(void*,void*);
     char      *pool;
     slist     *mem_chunks;
     char      mem[0];
@@ -41,6 +44,8 @@ struct hash_mem_chunk {
     size_t size;
     size_t refcount;
 };
+
+static void __hash_alloc_new_chunk(struct hash *h);
 
 static inline size_t __hash_bucket_size(size_t ksize, size_t vsize) {
     return (sizeof(struct hash_bucket) + (ksize) + (vsize));
@@ -106,6 +111,9 @@ struct hash* hash_create( void  *mem
     for( ; i < buck_num; i++ ) {
         c->buckets[i] = slist_nil();
     }
+
+    c->alloc_cc = 0;
+    c->alloc_fn = 0;
 
     return c;
 }
@@ -200,7 +208,7 @@ void hash_shrink(struct hash *c, void *cc, void (*dealloc)(void*, void*)) {
                                , __chunk_used
                                );
 
-    
+
     while( to_del ) {
         slist *e = slist_uncons(&to_del);
 
@@ -321,6 +329,10 @@ static inline slist *__hash_add_entry(struct hash *c, void *k)
 
     size_t idx = HASH(hashcode);
 
+    if( hash_exhausted(c) ) {
+        __hash_alloc_new_chunk(c);
+    }
+
     slist *it = slist_uncons(&c->free);
 
     if( it == NULL ) {
@@ -348,6 +360,20 @@ bool hash_add(struct hash* c, void *k, void *v)
     safecall(unit, c->valcopy, __hash_val(c, it->value), v);
 
     return true;
+}
+
+void *hash_get_add(struct hash *c, void *k, void *v) {
+    void *v_ = hash_get(c, k);
+
+    if( v_ ) {
+        return v_;
+    }
+
+    if( !hash_add(c, k, v) ) {
+        return 0;
+    }
+
+    return hash_get(c, k);
 }
 
 void hash_del( struct hash *c, void *k)
@@ -430,4 +456,49 @@ bool hash_alter2( struct hash *c
 }
 
 
+void hash_set_autogrow( struct hash *h
+                      , size_t limit
+                      , void *cc
+                      , void *(*alloc)(void *, size_t)
+                      , void (*dealloc)(void*, void *)) {
+    h->alloc_cc = cc;
+    h->alloc_fn = alloc;
+    h->dealloc_fn = dealloc;
+}
+
+void hash_auto_shrink(struct hash *c) {
+    if( c->dealloc_fn ) {
+        hash_shrink(c, c->alloc_cc, c->dealloc_fn);
+    }
+}
+
+static void __hash_alloc_new_chunk(struct hash *h) {
+    const size_t page_size = 4096;
+    const size_t min_items = 4;
+    const size_t hl = slist_size(__hash_entry_len(h));
+    const size_t hdrlen = slist_size(sizeof(struct hash_mem_chunk));
+    const size_t memrest = page_size - hdrlen;
+
+    assert( page_size > hdrlen );
+
+    const size_t n = hl*2 < memrest ? memrest/hl
+                                    : min_items;
+
+    const size_t chunk_len = hdrlen + n*hl;
+
+    if( !h->alloc_fn || !h->dealloc_fn ) {
+        return;
+    }
+
+    void *mem = h->alloc_fn(h->alloc_cc, chunk_len);
+    (void)hash_grow(h, mem, chunk_len);
+}
+
+void hash_memory_info( struct hash *c
+                     , size_t *chunk_hdr_size
+                     , size_t *item_size
+                     ) {
+    *item_size = slist_size(__hash_entry_len(c));
+    *chunk_hdr_size = slist_size(sizeof(struct hash_mem_chunk));
+}
 
