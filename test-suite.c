@@ -43,6 +43,7 @@ static struct test_ {
     ,{  test_hash_find_1,"test_hash_find_1" }
     ,{  test_hash_get_add_1, "test_hash_get_add_1" }
     ,{  test_hash_autogrow_1, "test_hash_autogrow_1" }
+    ,{  test_clos_1,       "test_clos_1" }
     ,{  0,        ""         }
 };
 

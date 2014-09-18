@@ -1,8 +1,8 @@
 .PHONY: ctags clean baseline check
 
-TESTSRC=dradix-test.c hash-test.c slist-test.c
+TESTSRC=dradix-test.c hash-test.c slist-test.c clos-test.c
 
-SOURCES=slist.c dradix.c hash.c hash-test.c dradix-test.c slist-test.c test-suite.c
+SOURCES=slist.c dradix.c hash.c clos.c hash-test.c dradix-test.c slist-test.c clos-test.c test-suite.c
 
 all: build-tests
 
@@ -18,8 +18,8 @@ ctags:
 	ctags *.c
 
 clean:
-	rm test-suite
-	rm t/*.h
+	rm -f test-suite
+	rm -f t/*.h
 
 baseline: build-tests
 	./test-suite list 2>&1 | xargs -L 1 t/scripts/mkbaseline.sh
