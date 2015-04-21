@@ -13,6 +13,8 @@ typedef struct slist_ {
 
 #define slist_nil() NULL
 
+#define slist_value(t, it) ((t)((it)->value))
+
 slist *slist_cons(slist *item, slist *next);
 
 slist *slist_uncons(slist **pitem);
@@ -39,12 +41,12 @@ void slist_filt_destructive( slist **xs
                            , bool (*filt)(void*, void*)
                            , void *ccd
                            , void (*destroy)(void*, slist*)
-                           ); 
+                           );
 
 void slist_partition_destructive( slist **xs
                                 , slist **notmatch
                                 , void  *cc
                                 , bool (*filt)(void*, void*)
-                                ); 
+                                );
 #endif
 
