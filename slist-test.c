@@ -146,3 +146,44 @@ void test_slist_partition_destructive_1(void) {
     slist_filt_destructive(&rest, 0, 0, 0, destroy_free);
 }
 
+void test_slist_char_array_1(void) {
+
+    struct ps {
+        char *s;
+    };
+
+    char pool[16 * slist_size(sizeof(struct ps))];
+    slist *free = slist_pool(pool, slist_size(sizeof(struct ps)), sizeof(pool));
+
+    char *args[10] = { "STRING N1"
+                     , "STRING N2"
+                     , "STRING N3"
+                     , "STRING N4"
+                     , "STRING N5"
+                     , "STRING N6"
+                     , "STRING N7"
+                     , "STRING N8"
+                     , "STRING N9"
+                     , "STRING N0"
+                     };
+
+/*    char c;*/
+    slist *ls = slist_nil();
+    size_t i = 0;
+    for(; i < sizeof(args)/sizeof(args[0]); i++ ) {
+        slist *n = slist_alloc(&free, 0, 0);
+        struct ps *it  = slist_value(struct ps*, n);
+        it->s = args[i];
+        ls = slist_cons(n, ls);
+        fprintf(stdout, "%s\n", it->s);
+    }
+
+    fprintf(stdout, "list size: %ld\n", slist_length(ls));
+
+    slist *e = ls;
+    for(; e; e = e->next) {
+        fprintf(stdout, "%s\n", slist_value(struct ps*, e)->s);
+    }
+}
+
+

@@ -37,6 +37,7 @@ static struct test_ {
     ,{  test_slist_filt_destructive_1,  "test_slist_filt_destructive_1" }
     ,{  test_slist_filt_destructive_2,  "test_slist_filt_destructive_2" }
     ,{  test_slist_partition_destructive_1,  "test_slist_partition_destructive_1" }
+    ,{  test_slist_char_array_1,  "test_slist_char_array_1" }
     ,{  test_hash_grow_1,  "test_hash_grow_1" }
     ,{  test_hash_shrink_1,"test_hash_shrink_1" }
     ,{  test_hash_bad_1,"test_hash_bad_1" }

@@ -1,103 +1,16 @@
 ??? hash create succeed
-hash_item 0 0
-hash_item 1 10
-hash_item 2 20
-hash_item 3 30
-hash_item 4 40
-hash_item 5 50
-hash_item 6 60
-hash_item 7 70
-hash_item 8 80
-hash_item 9 90
-hash_item 10 100
-hash_item 11 110
-hash_item 12 120
-hash_item 13 130
-hash_item 14 140
-hash_item 15 150
-hash_item 16 160
-hash_item 17 170
-hash_item 18 180
-hash_item 19 190
-hash_item 20 200
-hash_item 21 210
-hash_item 22 220
-hash_item 23 230
-hash_item 24 240
-hash_item 25 250
-hash_item 26 260
-hash_item 27 270
-hash_item 28 280
-hash_item 29 290
-hash_item 30 300
-hash_item 31 310
-hash_item 32 320
-hash_item 33 330
-hash_item 34 340
-hash_item 35 350
-hash_item 36 360
-hash_item 37 370
-hash_item 38 380
-hash_item 39 390
-hash_item 40 400
-hash_item 41 410
-hash_item 42 420
-hash_item 43 430
-hash_item 44 440
-hash_item 45 450
-hash_item 46 460
-hash_item 47 470
-hash_item 48 480
-hash_item 49 490
-
-
-hash_item 0 0
-hash_item 1 1
-hash_item 2 2
-hash_item 3 3
-hash_item 4 4
-hash_item 5 5
-hash_item 6 6
-hash_item 7 7
-hash_item 8 8
-hash_item 9 9
-hash_item 10 10
-hash_item 11 11
-hash_item 12 12
-hash_item 13 13
-hash_item 14 14
-hash_item 15 15
-hash_item 16 16
-hash_item 17 17
-hash_item 18 18
-hash_item 19 19
-hash_item 20 20
-hash_item 21 21
-hash_item 22 22
-hash_item 23 23
-hash_item 24 24
-hash_item 25 25
-hash_item 26 26
-hash_item 27 27
-hash_item 28 28
-hash_item 29 29
-hash_item 30 30
-hash_item 31 31
-hash_item 32 32
-hash_item 33 33
-hash_item 34 34
-hash_item 35 35
-hash_item 36 36
-hash_item 37 37
-hash_item 38 38
-hash_item 39 39
-hash_item 40 40
-hash_item 41 41
-hash_item 42 42
-hash_item 43 43
-hash_item 44 44
-hash_item 45 45
-hash_item 46 46
-hash_item 47 47
-hash_item 48 48
-hash_item 49 49
+hash_get(1): 9
+hash_find(1): 9
+hash_find(1): 8
+hash_find(1): 7
+hash_find(1): 6
+hash_find(1): 5
+hash_find(1): 4
+hash_find(1): 3
+hash_find(1): 2
+hash_find(1): 1
+hash_find(1): 0
+hash_find(2): 40
+hash_find(2): 30
+hash_find(2): 20
+hash_find(2): 10
