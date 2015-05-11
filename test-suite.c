@@ -45,6 +45,9 @@ static struct test_ {
     ,{  test_hash_get_add_1, "test_hash_get_add_1" }
     ,{  test_hash_autogrow_1, "test_hash_autogrow_1" }
     ,{  test_clos_1,       "test_clos_1" }
+    ,{  test_heap_test_1,  "test_heap_test_1" }
+    ,{  test_heap_test_2,  "test_heap_test_2" }
+    ,{  test_heap_test_3,  "test_heap_test_3" }
     ,{  0,        ""         }
 };
 
