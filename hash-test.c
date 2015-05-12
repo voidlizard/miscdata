@@ -731,6 +731,38 @@ void test_hash_autogrow_1(void)
 
 }
 
+static void __dump_u64_u64(void *cc, void *k, void *v) {
+    fprintf(stdout, "%ld %ld\n", *(uint64_t*)k, *(uint64_t*)v);
+}
 
+void test_hash_mem_size_1(void)
+{
+
+    size_t hmemsize = hash_mem_size(10, sizeof(uint64_t), sizeof(uint64_t));
+    fprintf(stderr, "hmemsize %ld\n", hmemsize);
+
+    char mem[hmemsize];
+    struct hash *c = hash_create( mem
+                                , sizeof(mem)
+                                , sizeof(uint64_t)
+                                , sizeof(uint64_t)
+                                , u64hash
+                                , u64cmp
+                                , u64cpy
+                                , u64cpy);
+
+    assert( c );
+
+    uint64_t i = 0;
+    for( ; ; i++ ) {
+        uint64_t tmp = i;
+
+        if( !hash_add(c, &i, &tmp) ) {
+            break;
+        }
+    }
+    fprintf(stdout, "hash items added: %ld\n", i);
+    hash_enum_items(c, 0, __dump_u64_u64);
+}
 
 

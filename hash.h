@@ -16,6 +16,8 @@ struct hash *hash_create( void  *mem
                         , void     (*keycopy)(void *, void *)
                         , void     (*valcopy)(void *, void *));
 
+size_t hash_mem_size(size_t n, size_t key_len, size_t val_len);
+
 bool hash_grow(struct hash *c, void *mem, size_t memsize);
 
 void hash_shrink(struct hash *, void*, void (*)(void*, void*));

@@ -108,9 +108,11 @@ struct hash* hash_create( void  *mem
 
     size_t i = 0;
 
+
     for( ; i < buck_num; i++ ) {
         c->buckets[i] = slist_nil();
     }
+
 
     c->alloc_cc = 0;
     c->alloc_fn = 0;
@@ -470,6 +472,11 @@ void hash_auto_shrink(struct hash *c) {
     if( c->dealloc_fn ) {
         hash_shrink(c, c->alloc_cc, c->dealloc_fn);
     }
+}
+
+size_t hash_mem_size(size_t n, size_t kl, size_t vl) {
+    size_t chunk = slist_size(__hash_bucket_size(kl, vl));
+    return sizeof(struct hash) + n*chunk + HASH_BUCKETS*sizeof(slist*);
 }
 
 static void __hash_alloc_new_chunk(struct hash *h) {
