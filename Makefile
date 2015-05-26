@@ -1,8 +1,9 @@
 .PHONY: ctags clean baseline check
 
 TESTSRC=dradix-test.c hash-test.c slist-test.c clos-test.c heap-test.c
+TESTSRC+=substr-test.c
 
-SOURCES := slist.c dradix.c hash.c clos.c maxheap.c
+SOURCES := slist.c dradix.c hash.c clos.c maxheap.c substr_kmp.c
 SOURCES += test-suite.c
 SOURCES += $(TESTSRC)
 

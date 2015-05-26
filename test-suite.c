@@ -49,6 +49,7 @@ static struct test_ {
     ,{  test_heap_test_2,  "test_heap_test_2" }
     ,{  test_heap_test_3,  "test_heap_test_3" }
     ,{  test_hash_mem_size_1,  "test_hash_mem_size_1" }
+    ,{  test_substr_1,      "test_substr_1" }
     ,{  0,        ""         }
 };
 
