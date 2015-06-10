@@ -155,3 +155,55 @@ void test_heap_test_3(void) {
         fprintf(stdout, "# {%d, %d}\n", c->cat, c->weight);
     }
 }
+
+void test_heap_test_4(void) {
+
+    size_t memsize = heap_mem_size(1, sizeof(struct cw));
+
+    fprintf(stderr, "memsize: %ld\n", memsize);
+
+    char heap_mem[heap_mem_size(1, sizeof(struct cw))];
+    struct heap *h = heap_create( heap_mem
+                                , sizeof(heap_mem)
+                                , sizeof(struct cw)
+                                , __cw_leq
+                                , __cw_cpy );
+
+    fprintf(stderr, "heap: %p\n", h);
+
+    fprintf(stdout, "# heap_size: %ld\n", heap_size(h));
+
+    struct cw cats[] = { {  1, 1 }
+                       , {  2, 1 }
+                       , {  1, 2 }
+                       , {  3, 1 }
+                       , { 12, 3 }
+                       , {  5, 1 }
+                       , { 31, 2 }
+                       , {  6, 2 }
+                       , {  7, 1 }
+                       , {  7, 1 }
+                       , { 10, 5 }
+                       };
+
+    fprintf(stdout, "\n");
+
+    size_t i = 0;
+    for(; i < sizeof(cats)/sizeof(cats[0]); i++ ) {
+        fprintf(stdout, "# {%d, %d}\n", cats[i].cat, cats[i].weight);
+        if( heap_full(h) ) {
+            struct cw *min = heap_get(h);
+            if( __cw_leq(min, &cats[i]) ) {
+                heap_pop(h);
+            }
+        }
+        heap_add(h, &cats[i]);
+    }
+
+    fprintf(stdout, "\n");
+    while( !heap_empty(h) ) {
+        struct cw *c = heap_pop(h);
+        fprintf(stdout, "# {%d, %d}\n", c->cat, c->weight);
+    }
+}
+

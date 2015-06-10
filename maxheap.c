@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include "heap.h"
 
+#ifndef MAX
+#define MAX(a,b) ((a) >= (b) ? (a) : (b))
+#endif
+
 struct heap {
     size_t n;
     size_t size;
@@ -93,7 +97,7 @@ size_t heap_size(struct heap *h) {
 }
 
 size_t heap_mem_size(size_t n, size_t chunk_size) {
-    return (sizeof(struct heap) + n*chunk_size);
+    return (sizeof(struct heap) + MAX(n,3)*chunk_size);
 }
 
 bool heap_empty(struct heap *h) {
