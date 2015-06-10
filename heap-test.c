@@ -188,6 +188,7 @@ void test_heap_test_4(void) {
 
     fprintf(stdout, "\n");
 
+
     size_t i = 0;
     for(; i < sizeof(cats)/sizeof(cats[0]); i++ ) {
         fprintf(stdout, "# {%d, %d}\n", cats[i].cat, cats[i].weight);
@@ -199,6 +200,8 @@ void test_heap_test_4(void) {
         }
         heap_add(h, &cats[i]);
     }
+
+    fprintf(stdout, "\nheap_items %ld\n", heap_items(h));
 
     fprintf(stdout, "\n");
     while( !heap_empty(h) ) {

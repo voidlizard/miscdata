@@ -17,6 +17,7 @@ struct heap * heap_create( void *mem
 
 size_t heap_mem_size(size_t n, size_t chunk_size);
 size_t heap_size(struct heap*);
+size_t heap_items(struct heap*);
 bool heap_full(struct heap*);
 bool heap_empty(struct heap*);
 bool heap_add(struct heap *, void *);

@@ -96,6 +96,10 @@ size_t heap_size(struct heap *h) {
     return h->size;
 }
 
+size_t heap_items(struct heap *h) {
+    return h->n;
+}
+
 size_t heap_mem_size(size_t n, size_t chunk_size) {
     return (sizeof(struct heap) + MAX(n,3)*chunk_size);
 }
