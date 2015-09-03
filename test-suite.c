@@ -51,6 +51,7 @@ static struct test_ {
     ,{  test_heap_test_4,  "test_heap_test_4" }
     ,{  test_hash_mem_size_1,  "test_hash_mem_size_1" }
     ,{  test_substr_1,      "test_substr_1" }
+    ,{  test_skiplist_1,    "test_skiplist_1" }
     ,{  0,        ""         }
 };
 
