@@ -126,3 +126,40 @@ void test_skiplist_1(void) {
     skiplist_destroy(sl);
 }
 
+
+void test_skiplist_2(void) {
+
+    ranctx rctx;
+    raninit(&rctx, 0xDEADBEEF);
+
+    char mem[skiplist_size];
+
+    struct skiplist *sl = skiplist_create( sizeof(mem)
+                                         , mem
+                                         , 4
+                                         , sizeof(uint32_t)
+                                         , __u32_leq
+                                         , __u32_cpy
+                                         , 0
+                                         , __alloc
+                                         , __dealloc
+                                         , &rctx
+                                         , __randnum
+                                         );
+
+
+    const size_t N = 16;
+    size_t i = 0;
+    for(; i < N; i++ ) {
+        uint32_t tmp = (ranval(&rctx) % (N));
+        skiplist_insert(sl, &tmp);
+    }
+
+    uint32_t cnt = 0;
+    skiplist_enum_debug(sl, &cnt, __print_node_u32);
+
+    skiplist_destroy(sl);
+}
+
+
+

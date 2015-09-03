@@ -1,5 +1,4 @@
 #include "skiplist.h"
-#include "slist.h"
 
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -33,11 +32,8 @@ struct skiplist {
 
 const size_t skiplist_size = sizeof(struct skiplist);
 
-static uint64_t __minus_inf_value = 10101010;
-static uint64_t __plus_inf_value  = 11111111;
-
-static void *const __minus_inf = &__minus_inf_value;
-static void *const __plus_inf  = &__plus_inf_value;
+static void *const __minus_inf = (void*)(0);
+static void *const __plus_inf  = (void*)(-1);
 
 struct skipnode {
     struct skipnode *next;
@@ -159,17 +155,11 @@ static bool skipnode_value_leq( struct skiplist *sl
 
     if( a == __minus_inf ) {
         return true;
-    }
-
-    if( b == __minus_inf ) {
+    } else if( a == __plus_inf ) {
         return false;
     }
 
-    if( b == __plus_inf ) {
-        return false;
-    }
-
-    if( a == __plus_inf ) {
+    if( b == __minus_inf || b == __plus_inf ) {
         return false;
     }
 
@@ -239,48 +229,56 @@ static void skiplist_add_levels(struct skiplist *sl, uint8_t n) {
     adjust_bottom(sl);
 }
 
-struct skipnode_path_cc {
-    slist *free;
-    slist *path;
+struct skipnode_ins_cc {
+    void *v;
+    struct skiplist *sl;
+    uint8_t l;
+    uint8_t promote_l;
+    struct skipnode *up;
+    struct skipnode *top;
+    void *newvalue;
 };
 
-static bool __skiplist_mem_path( void *cc_
-                               , struct skipnode *prev
-                               , struct skipnode *n) {
+static bool skipnode_ins_fn( void *cc_
+                           , struct skipnode *prev
+                           , struct skipnode *n) {
 
-    struct skipnode_path_cc *cc = cc_;
-    slist *e = slist_uncons(&cc->free);
+    struct skipnode_ins_cc *cc = cc_;
 
-    if( e ) {
-        struct skipnode **v = slist_value(struct skipnode**, e);
-        *v = n;
-        cc->path = slist_cons(e, cc->path);
-    } else {
-        // FIXME: error handling!
-        return false;
+    if( cc->promote_l == cc->l ) {
+
+        struct skipnode *nn = 0;
+
+        if( n->down ) {
+            nn = skipnode_insert_next(n, skipnode_create( cc->sl, 0, 0 ));
+        } else {
+            nn = skipnode_insert_next(n, skipnode_create( cc->sl
+                                                        , cc->v
+                                                        , cc->sl->itemsize));
+            cc->newvalue = nn->value;
+        }
+
+        if( !nn ) {
+            // FIXME: memory allocation
+            return false;
+        }
+
+        if( !cc->up ) {
+            cc->up = nn;
+            cc->top = cc->up;
+        } else {
+            cc->up->down = nn;
+            cc->up = nn;
+        }
+
+        cc->promote_l--;
     }
+
+    cc->l--;
 
     return true;
 }
 
-static inline bool __allocate_path(struct skiplist *sl, slist **f, void **p) {
-    const size_t itemsz = slist_size(sizeof(struct skipnode*));
-    const size_t poolsz = sl->maxlevel*itemsz;
-
-    *p = sl->alloc(sl->allocator, poolsz);
-
-    if( ! (*p) ) {
-        return false;
-    }
-
-    *f = slist_pool(*p, itemsz, poolsz);
-
-    return !!(*f);
-}
-
-static inline void __deallocate_path(struct skiplist *sl, void* pool) {
-    sl->dealloc(sl->allocator, pool);
-}
 
 bool skiplist_insert(struct skiplist *sl, void *v) {
 
@@ -290,46 +288,28 @@ bool skiplist_insert(struct skiplist *sl, void *v) {
         skiplist_add_levels(sl, lvl - sl->level);
     }
 
-    void *pool = 0;
-    slist *free = 0;
-
-    if( !__allocate_path(sl, &free, &pool) ) {
-        return false;
-    }
-
-    struct skipnode_path_cc cc = { .free = free
-                                 , .path = slist_nil()
-                                 };
+    struct skipnode_ins_cc cc = { .sl = sl
+                                , .l  = sl->level
+                                , .promote_l = lvl
+                                , .v = v
+                                , .up = 0
+                                , .newvalue = 0
+                                };
 
     skipnode_find( sl
                  , sl->top
                  , v
                  , &cc
-                 , __skiplist_mem_path );
+                 , skipnode_ins_fn );
 
 
-    if( !cc.path ) {
-        // FIXME: error!
-        return false;
+    struct skipnode *i = cc.top;
+
+    for(; i; i = i->down ) {
+        if( !i->value ) {
+            i->value = cc.newvalue;
+        }
     }
-
-    struct skipnode** n = slist_value(struct skipnode**, slist_uncons(&cc.path));
-
-    struct skipnode *nn = 0;
-    nn = skipnode_insert_next(*n, skipnode_create(sl, v, sl->itemsize));
-    lvl--;
-
-    slist *e = 0;
-    struct skipnode *down = nn;
-
-    for(; lvl && (e = slist_uncons(&cc.path)); lvl--) {
-        struct skipnode **p = slist_value(struct skipnode**, e);
-        struct skipnode *q = skipnode_insert_next(*p, skipnode_create(sl, down->value, 0));
-        q->down = down;
-        down = q;
-    }
-
-    __deallocate_path(sl, pool);
 
     return true;
 }
