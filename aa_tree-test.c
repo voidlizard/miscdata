@@ -35,13 +35,13 @@ static void __print_u32_dot( void *cc
 
     char tmp[128];
 
-    if( !p ) {
-        snprintf(tmp, sizeof(tmp), "(root)");
+    if( !p || !p->value ) {
+        snprintf(tmp, sizeof(tmp), "(nil,0)");
     } else {
         snprintf(tmp, sizeof(tmp), "\"(%u,%zu)\"", *(uint32_t*)p->value, p->level);
     }
 
-    if( n ) {
+    if( n && n->value ) {
         fprintf( stdout
                , "%s -> " "\"(%u,%zu)\";\n"
                , tmp

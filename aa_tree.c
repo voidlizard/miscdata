@@ -319,12 +319,12 @@ static void __aa_tree_walk_debug_fn( void *cc_
 
     struct aa_tree_walk_debug_cc *cc = cc_;
 
-    struct aa_node_info prev = { .level = p ? p->level : 0
-                               , .value = p ? aa_value(p) : 0
+    struct aa_node_info prev = { .level = !aa_nil(p) ? p->level : 0
+                               , .value = !aa_nil(p) ? aa_value(p) : 0
                                };
 
-    struct aa_node_info curr = { .level = n ? n->level : 0
-                               , .value = n ? aa_value(n) : 0
+    struct aa_node_info curr = { .level = !aa_nil(n) ? n->level : 0
+                               , .value = !aa_nil(n) ? aa_value(n) : 0
                                };
 
     cc->fn(cc->cc, &prev, &curr);
