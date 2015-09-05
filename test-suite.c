@@ -53,6 +53,14 @@ static struct test_ {
     ,{  test_substr_1,      "test_substr_1" }
     ,{  test_skiplist_1,    "test_skiplist_1" }
     ,{  test_skiplist_2,    "test_skiplist_2" }
+    ,{  test_aa_tree_create_1,   "test_aa_tree_create_1"    }
+    ,{  test_aa_tree_remove_1_0, "test_aa_tree_remove_1_0"  }
+    ,{  test_aa_tree_remove_1_1, "test_aa_tree_remove_1_1"  }
+    ,{  test_aa_tree_remove_1_2, "test_aa_tree_remove_1_2"  }
+    ,{  test_aa_tree_remove_2,   "test_aa_tree_remove_2"    }
+    ,{  test_aa_tree_remove_3,   "test_aa_tree_remove_3"    }
+    ,{  test_aa_tree_lookup_1,   "test_aa_tree_lookup_1"    }
+    ,{  test_aa_tree_clinical_1, "test_aa_tree_clinical_1"  }
     ,{  0,        ""         }
 };
 
