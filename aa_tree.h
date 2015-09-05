@@ -24,6 +24,9 @@ bool aa_tree_insert(struct aa_tree *t, void *v);
 void aa_tree_remove(struct aa_tree *t, void *v);
 void *aa_tree_find( struct aa_tree *t, void *v );
 
+void aa_tree_enum( struct aa_tree *t
+                 , void *cc_
+                 , void (*fn)(void*, void*));
 
 // for debugging
 struct aa_node_info {
