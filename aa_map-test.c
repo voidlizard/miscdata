@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "aa_tree.h"
+#include "aa_map.h"
 #include "prng.h"
 
 static void *__alloc(void *cc, size_t n) {
@@ -396,7 +396,6 @@ void test_aa_tree_clinical_1(void) {
     aa_tree_destroy(t);
 }
 
-
 static void __map_print_u32(void *c, void *k, void *v) {
     fprintf(stdout, "(%u,%u)\n", *(uint32_t*)k, *(uint32_t*)v);
 }
@@ -528,6 +527,49 @@ void test_aa_map_alter_1(void) {
         aa_map_alter(m, true, &k, &z, __u32_mul_even);
     }
 
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    aa_map_destroy(m);
+}
+
+
+bool __filt_even(void *cc, void *k, void *v) {
+    return !(*(uint32_t*)v % 2);
+}
+
+void test_aa_map_filter_1(void) {
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , sizeof(uint32_t)
+                                    , sizeof(uint32_t)
+                                    , __u32_cmp
+                                    , __u32_cpy
+                                    , __u32_cpy
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+    const size_t N = 10;
+    size_t i = 0;
+
+    for(; i < N; i++ ) {
+        uint32_t tmp = i;
+        aa_map_add(m, &tmp, &tmp);
+    }
+
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    aa_map_filter(m, 0, __filt_even);
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    fprintf(stdout, "wipe all");
+    aa_map_filter(m, 0, 0);
     aa_map_enum(m, 0, __map_print_u32);
     fprintf(stdout, "\n");
 

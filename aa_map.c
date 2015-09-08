@@ -1,6 +1,4 @@
-#include "aa_tree.h"
-
-#include <stdio.h>
+#include "aa_map.h"
 
 #define safecall(v, f, ...) ((f) ? (f(__VA_ARGS__)) : (v))
 #define unit                {}
@@ -102,7 +100,7 @@ static struct aa_node *aa_node_init( struct aa_tree *t
     return n;
 }
 
-static struct aa_node *aa_node_create( struct aa_tree *t, void *v ) {
+static struct aa_node *aa_node_create(struct aa_tree *t, void *v) {
     struct aa_node *n = t->alloc(t->allocator, aa_node_size + t->itemsize);
 
     if( !n ) {
@@ -545,6 +543,42 @@ bool aa_map_alter( struct aa_map *m
     return false;
 }
 
+static void aa_node_unlink(struct aa_node *c, struct aa_node **ns) {
+
+    if( aa_nil(c) ) {
+        return;
+    }
+
+    struct aa_node *lp = l(c);
+    struct aa_node *rp = r(c);
+
+    c->child[L] = 0;
+    c->child[R] = *ns;
+    (*ns) = c;
+
+    aa_node_unlink(lp, ns);
+    aa_node_unlink(rp, ns);
+}
+
 void aa_map_filter(struct aa_map *m, void *cc, bool (*fn)(void*,void*,void*)) {
+    struct aa_node *ns = 0;
+    aa_node_unlink(m->t->root, &ns);
+
+    struct aa_tree *t = m->t;
+    t->root = aa_node_null;
+
+    while(ns) {
+        void *cell = aa_value(ns);
+        void *k = aa_cell_key(cell);
+        void *v = aa_cell_val(cell);
+
+        if( fn && fn(cc, k, v) ) {
+            aa_map_add(m, k, v);
+        }
+
+        void *zombie = ns;
+        ns = r(ns);
+        t->dealloc(t->allocator, zombie);
+    }
 }
 

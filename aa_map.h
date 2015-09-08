@@ -1,5 +1,5 @@
-#ifndef __aa_tree_h
-#define __aa_tree_h
+#ifndef __aa_map_h
+#define __aa_map_h
 
 #include <stdbool.h>
 #include <stdint.h>
