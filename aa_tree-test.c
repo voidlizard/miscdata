@@ -17,12 +17,8 @@ static void __dealloc(void *cc, void *c) {
     free(c);
 }
 
-static bool __u32_less(void *a, void *b) {
-    return *(uint32_t*)a < *(uint32_t*)b;
-}
-
-static bool __u32_eq(void *a, void *b) {
-    return *(uint32_t*)a == *(uint32_t*)b;
+static int __u32_cmp(void *a, void *b) {
+    return (int)( *(uint32_t*)a - *(uint32_t*)b );
 }
 
 static void __u32_cpy(void *a, void *b) {
@@ -56,17 +52,11 @@ static void __print_u32_digraph( struct aa_tree *t, const char *name ) {
     fprintf(stdout, "}\n");
 }
 
-static size_t __less_num = 0;
-static size_t __eq_num = 0;
+static size_t __cmp_num = 0;
 
-static bool __u32_less_stat(void *a, void *b) {
-    __less_num++;
-    return *(uint32_t*)a < *(uint32_t*)b;
-}
-
-static bool __u32_eq_stat(void *a, void *b) {
-    __eq_num++;
-    return *(uint32_t*)a == *(uint32_t*)b;
+static int __u32_cmp_stat(void *a, void *b) {
+    __cmp_num++;
+    return __u32_cmp(a,b);
 }
 
 void test_aa_tree_create_1(void) {
@@ -76,8 +66,7 @@ void test_aa_tree_create_1(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less
-                                      , __u32_eq
+                                      , __u32_cmp
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -103,8 +92,7 @@ void test_aa_tree_remove_1_0(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less
-                                      , __u32_eq
+                                      , __u32_cmp
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -139,8 +127,7 @@ void test_aa_tree_remove_1_1(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less
-                                      , __u32_eq
+                                      , __u32_cmp
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -175,8 +162,7 @@ void test_aa_tree_remove_1_2(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less
-                                      , __u32_eq
+                                      , __u32_cmp
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -211,8 +197,7 @@ void test_aa_tree_remove_2(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less
-                                      , __u32_eq
+                                      , __u32_cmp
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -250,8 +235,7 @@ void test_aa_tree_remove_3(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less
-                                      , __u32_eq
+                                      , __u32_cmp
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -292,8 +276,7 @@ void test_aa_tree_lookup_1(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less_stat
-                                      , __u32_eq_stat
+                                      , __u32_cmp_stat
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -303,55 +286,46 @@ void test_aa_tree_lookup_1(void) {
     const size_t N = (1<<18);
     size_t i = 0;
 
-    size_t ln = 0;
-    size_t en = 0;
+    size_t cn = 0;
 
     for(; i < N; i++ ) {
         uint32_t tmp = ranval(&rctx) % N;
 
-        __less_num = 0;
-        __eq_num = 0;
+        __cmp_num = 0;
 
         aa_tree_insert(t, &tmp);
 
-        ln = __less_num > ln ? __less_num : ln;
-        en = __eq_num > en ? __eq_num : en;
+        cn = __cmp_num > cn ? __cmp_num : cn;
     }
 
 
     fprintf( stdout
-           , "inserted %zu, max. less: %zu ops, max. eq: %zu ops\n"
+           , "inserted %zu, max. cmp: %zu ops\n"
            , i
-           , ln
-           , en );
+           , cn );
 
 
-    ln = 0;
-    en = 0;
+    cn = 0;
 
     size_t found = 0;
     for(i = 0; i < N; i++ ) {
         uint32_t tmp = ranval(&rctx) % N;
 
-        __less_num = 0;
-        __eq_num = 0;
+        __cmp_num = 0;
 
         if( aa_tree_find(t, &tmp) ) {
             found++;
         }
 
-        ln = __less_num > ln ? __less_num : ln;
-        en = __eq_num > en ? __eq_num : en;
+        cn = __cmp_num > cn ? __cmp_num : cn;
 
     }
 
     fprintf( stdout
-           , "inserted %zu, max. less: %zu ops, max. eq: %zu ops\n"
+           , "found %zu of %zu, max. cmp: %zu ops\n"
+           , found
            , i
-           , ln
-           , en );
-
-    fprintf(stdout, "found %zu\n", found);
+           , cn );
 
     aa_tree_destroy(t);
 }
@@ -369,8 +343,7 @@ void test_aa_tree_clinical_1(void) {
     struct aa_tree *t = aa_tree_create( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
-                                      , __u32_less_stat
-                                      , __u32_eq_stat
+                                      , __u32_cmp_stat
                                       , __u32_cpy
                                       , 0
                                       , __alloc
@@ -380,56 +353,46 @@ void test_aa_tree_clinical_1(void) {
     const size_t N = 1000000;
     size_t i = 0;
 
-    size_t ln = 0;
-    size_t en = 0;
+    size_t cn = 0;
 
     for(; i < N; i++ ) {
         uint32_t tmp = i;
 
-        __less_num = 0;
-        __eq_num = 0;
+        __cmp_num = 0;
 
         aa_tree_insert(t, &tmp);
 
-        ln = __less_num > ln ? __less_num : ln;
-        en = __eq_num > en ? __eq_num : en;
+        cn = __cmp_num > cn ? __cmp_num : cn;
     }
 
     fprintf( stdout
-           , "inserted %zu, max. less: %zu ops, max. eq: %zu ops\n"
+           , "inserted %zu, max. cmp: %zu ops\n"
            , i
-           , ln
-           , en );
+           , cn );
 
 
-    ln = 0;
-    en = 0;
+    cn = 0;
 
     size_t found = 0;
     for(i = 0; i < N; i++ ) {
         uint32_t tmp = ranval(&rctx) % N;
 
-        __less_num = 0;
-        __eq_num = 0;
+        __cmp_num = 0;
 
         if( aa_tree_find(t, &tmp) ) {
             found++;
         }
 
-        ln = __less_num > ln ? __less_num : ln;
-        en = __eq_num > en ? __eq_num : en;
+        cn = __cmp_num > cn ? __cmp_num : cn;
 
     }
 
     fprintf( stdout
-           , "inserted %zu, max. less: %zu ops, max. eq: %zu ops\n"
+           , "found %zu of %zu, max. cmp: %zu ops\n"
+           , found
            , i
-           , ln
-           , en );
-
-    fprintf(stdout, "found %zu\n", found);
+           , cn );
 
     aa_tree_destroy(t);
 }
-
 

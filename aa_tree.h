@@ -8,12 +8,10 @@
 struct aa_tree;
 extern const size_t aa_tree_size;
 
-
 struct aa_tree *aa_tree_create( size_t memsize
                               , void *mem
                               , size_t itemsize
-                              , bool (*less)(void*,void*)
-                              , bool (*eq)(void*,void*)
+                              , int cmp(void*,void*)
                               , void (*cpy)(void*,void*)
                               , void *allocator
                               , void *(*alloc)(void*,size_t)

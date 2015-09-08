@@ -9,8 +9,7 @@ struct aa_tree {
 
     size_t itemsize;
 
-    bool (*less)(void*,void*);
-    bool (*eq)(void*,void*);
+    int (*cmp)(void*,void*);
     void (*cpy)(void*,void*);
 
     void *allocator;
@@ -59,8 +58,7 @@ static inline bool aa_leaf( struct aa_node *n ) {
 struct aa_tree *aa_tree_create( size_t memsize
                               , void *mem
                               , size_t itemsize
-                              , bool (*less)(void*,void*)
-                              , bool (*eq)(void*,void*)
+                              , int (*cmp)(void*,void*)
                               , void (*cpy)(void*,void*)
                               , void *allocator
                               , void *(*alloc)(void*,size_t)
@@ -74,8 +72,7 @@ struct aa_tree *aa_tree_create( size_t memsize
     struct aa_tree *t = mem;
     t->root = aa_node_null;
     t->itemsize = itemsize;
-    t->less = less;
-    t->eq = eq;
+    t->cmp = cmp;
     t->cpy = cpy;
     t->allocator = allocator;
     t->alloc = alloc;
@@ -110,8 +107,8 @@ static struct aa_node *aa_node_create( struct aa_tree *t, void *v ) {
     return aa_node_init(t, n, v);
 }
 
-static inline lr dir_of(bool le) {
-    return le ? L : R;
+static inline size_t dir_of(int cmp) {
+    return cmp < 0 ? L : R;
 }
 
 static void aa_node_destroy( struct aa_tree *t, struct aa_node *v ) {
@@ -166,11 +163,13 @@ static struct aa_node *aa_node_insert( struct aa_tree *t
         return aa_node_create(t, v);
     }
 
-    if( t->eq( aa_value(to), v ) ) {
+    int cmp = t->cmp(v, aa_value(to));
+
+    if( !cmp )  {
         return to;
     }
 
-    size_t dir = dir_of(t->less(v, aa_value(to)));
+    const lr dir = dir_of(cmp);
 
     to->child[dir] = aa_node_insert(t, to->child[dir], v);
 
@@ -190,7 +189,9 @@ static struct aa_node* aa_node_remove( struct aa_tree *t
 
     *last = n;
 
-    lr dir = dir_of(t->less(v, aa_value(n)));
+    int cmp = t->cmp(v, aa_value(n));
+
+    lr dir = dir_of(cmp);
 
     if( dir == R ) {
         *deleted = n;
@@ -198,7 +199,7 @@ static struct aa_node* aa_node_remove( struct aa_tree *t
 
     n->child[dir] = aa_node_remove(t, n->child[dir], v, last, deleted);
 
-    if( n == *last && !aa_nil(*deleted) && t->eq(v, aa_value(*deleted) ) ) {
+    if( n == *last && !aa_nil(*deleted) && !t->cmp(v, aa_value(*deleted) ) ) {
         // we're about to delete the value??
         t->cpy((*deleted)->data, n->data);
         *deleted = aa_node_null;
@@ -243,16 +244,16 @@ static struct aa_node *aa_node_find( struct aa_tree *t
                                    , struct aa_node *n
                                    , struct aa_node **p ) {
 
-    if( !n || aa_node_null == n ) {
+    if( aa_nil(n) ) {
         return 0;
     }
 
-    if( t->eq( aa_value(n), v ) ) {
+    if( !t->cmp( aa_value(n), v ) ) {
         return n;
     }
 
     *p = n;
-    return aa_node_find(t,v,n->child[dir_of(t->less(v,aa_value(n)))],p);
+    return aa_node_find(t,v,n->child[dir_of(t->cmp(v,aa_value(n)))],p);
 }
 
 void *aa_tree_find( struct aa_tree *t, void *v ) {
