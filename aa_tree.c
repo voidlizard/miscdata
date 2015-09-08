@@ -2,6 +2,9 @@
 
 #include <stdio.h>
 
+#define safecall(v, f, ...) ((f) ? (f(__VA_ARGS__)) : (v))
+#define unit                {}
+
 typedef enum { L = 0, R = 1 } lr;
 
 struct aa_node;
@@ -158,22 +161,27 @@ static inline struct aa_node* aa_split(struct aa_node *n)
 
 static struct aa_node *aa_node_insert( struct aa_tree *t
                                      , struct aa_node *to
-                                     , void *v ) {
+                                     , void *v
+                                     , void *cc
+                                     , void (*fn)(void*,void*,bool)
+                                     ) {
 
     if( to == aa_node_null ) {
-        // create new leaf
-        return aa_node_create(t, v);
+        struct aa_node *n = aa_node_create(t, v);
+        safecall(unit, fn, cc, aa_value(n), true);
+        return n;
     }
 
     int cmp = t->cmp(v, aa_value(to));
 
-    if( !cmp )  {
+    if( !cmp ) {
+        safecall(unit, fn, cc, aa_value(to), false);
         return to;
     }
 
     const lr dir = dir_of(cmp);
 
-    to->child[dir] = aa_node_insert(t, to->child[dir], v);
+    to->child[dir] = aa_node_insert(t, to->child[dir], v, cc, fn);
 
     return aa_split(aa_skew(to));
 }
@@ -269,9 +277,13 @@ void aa_tree_remove(struct aa_tree *t, void *v) {
     t->root = aa_node_remove(t, t->root, v, &l, &d);
 }
 
+static bool aa_tree_alter (struct aa_tree *t
+                         , void *v
+                         , void *cc
+                         , void (*fn)(void*,void*,bool)) {
 
-bool aa_tree_insert(struct aa_tree *t, void *v) {
-    struct aa_node *n = aa_node_insert(t, t->root, v);
+
+    struct aa_node *n = aa_node_insert(t, t->root, v, cc, fn);
 
     if( !n ) {
         return false;
@@ -279,6 +291,10 @@ bool aa_tree_insert(struct aa_tree *t, void *v) {
 
     t->root = n;
     return true;
+}
+
+bool aa_tree_insert(struct aa_tree *t, void *v) {
+    return aa_tree_alter(t,v,0,0);
 }
 
 void aa_tree_destroy(struct aa_tree *t) {
@@ -388,7 +404,10 @@ static void aa_map_cell_cpy(void *a_, void *b_) {
 
     a->m = m;
     m->keycpy(aa_cell_key(a), aa_cell_key(b));
-    m->valcpy(aa_cell_val(a), aa_cell_val(b));
+
+    if( aa_cell_val(b) ) {
+        m->valcpy(aa_cell_val(a), aa_cell_val(b));
+    }
 }
 
 static int aa_map_cell_cmp(void *a_, void *b_) {
@@ -456,12 +475,9 @@ bool aa_map_add(struct aa_map *m, void *k, void *v) {
 }
 
 void *aa_map_find(struct aa_map *m, void *k) {
-    struct aa_map_cell cell = { 0 };
-
-    struct aa_map_cell *cp = aa_map_cell_init(m, &cell, k, 0);
-
+    struct aa_map_cell cell;
     struct aa_map_cell *r = aa_tree_find( m->t
-                                        , cp );
+                                        , aa_map_cell_init(m, &cell, k, 0));
     return r ? aa_cell_val(r) : 0;
 }
 
@@ -490,6 +506,16 @@ void aa_map_destroy(struct aa_map *m) {
     aa_tree_destroy(m->t);
 }
 
+struct aa_map_alter_cc {
+    void *cc;
+    void (*fn)(void*,void*,void*,bool);
+};
+
+static void aa_map_alter_fn(void *cc, void *v, bool n) {
+    struct aa_map_alter_cc *acc = cc;
+    acc->fn(acc->cc, aa_cell_key(v), aa_cell_val(v), n);
+}
+
 bool aa_map_alter( struct aa_map *m
                  , bool create
                  , void *k
@@ -498,6 +524,24 @@ bool aa_map_alter( struct aa_map *m
                              , void*   // k
                              , void*   // v
                              , bool)) {
+
+    struct aa_map_alter_cc acc = { .cc = cc, .fn = fn };
+
+    struct aa_map_cell cell;
+    struct aa_map_cell *cp = aa_map_cell_init(m, &cell, k, 0);
+
+    if( create ) {
+        return aa_tree_alter(m->t, cp, &acc, aa_map_alter_fn);
+    } else {
+        struct aa_node *p = 0;
+        struct aa_node *n = aa_node_find(m->t, cp, m->t->root, &p);
+        if( n ) {
+            struct aa_map_cell *cp = aa_value(n);
+            fn(cc, aa_cell_key(cp), aa_cell_val(cp), false);
+            return true;
+        }
+    }
+
     return false;
 }
 

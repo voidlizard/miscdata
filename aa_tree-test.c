@@ -350,7 +350,7 @@ void test_aa_tree_clinical_1(void) {
                                       , __dealloc
                                       );
 
-    const size_t N = 1000000;
+    const size_t N = 10000;
     size_t i = 0;
 
     size_t cn = 0;
@@ -447,6 +447,89 @@ void test_aa_map_basic_1(void) {
         uint32_t *v = aa_map_find(m, &k);
         fprintf(stdout, "found %u: %u\n", k, v ? *v : -1);
     }
+
+    aa_map_destroy(m);
+}
+
+void __u32_mul(void* cc, void *k, void *v, bool n) {
+    if( n ) {
+        *(uint32_t*)v = 1;
+    } else {
+        *(uint32_t*)v *= *(uint32_t*)cc;
+    }
+}
+
+void __u32_mul_even(void* cc, void *k, void *v, bool n) {
+    if( n ) {
+        *(uint32_t*)v = 1;
+    } else if( !(*(uint32_t*)v % 2) ) {
+        *(uint32_t*)v *= *(uint32_t*)cc;
+    }
+}
+
+
+void __u32_set(void* cc, void *k, void *v, bool n) {
+    *(uint32_t*)v = *(uint32_t*)cc;
+}
+
+void test_aa_map_alter_1(void) {
+
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , sizeof(uint32_t)
+                                    , sizeof(uint32_t)
+                                    , __u32_cmp
+                                    , __u32_cpy
+                                    , __u32_cpy
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+
+    uint32_t k = 1;
+    uint32_t z = 1;
+    const size_t N = 20;
+
+    aa_map_alter(m, false, &k, &z, __u32_set);
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    aa_map_alter(m, true, &k, &z, __u32_set);
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    z = 10;
+    aa_map_alter(m, false, &k, &z, __u32_mul);
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    z = 10;
+    aa_map_alter(m, true, &k, &z, __u32_mul);
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    k = 2;
+    aa_map_alter(m, true, &k, &z, __u32_mul);
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    for(k = 3; k < N; k++ ) {
+        aa_map_alter(m, true, &k, &k, __u32_set);
+    }
+
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
+
+    z = 1000;
+    for(k = 3; k < N; k++ ) {
+        aa_map_alter(m, true, &k, &z, __u32_mul_even);
+    }
+
+    aa_map_enum(m, 0, __map_print_u32);
+    fprintf(stdout, "\n");
 
     aa_map_destroy(m);
 }
