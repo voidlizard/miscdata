@@ -56,7 +56,7 @@ static size_t __cmp_num = 0;
 
 static int __u32_cmp_stat(void *a, void *b) {
     __cmp_num++;
-    return __u32_cmp(a,b);
+    return (int)( *(uint32_t*)a - *(uint32_t*)b );
 }
 
 void test_aa_tree_create_1(void) {
