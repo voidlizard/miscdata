@@ -1,5 +1,7 @@
 #include "aa_tree.h"
 
+#include <stdio.h>
+
 typedef enum { L = 0, R = 1 } lr;
 
 struct aa_node;
@@ -354,6 +356,7 @@ struct aa_map {
 
     void (*keycpy)(void*,void*);
     void (*valcpy)(void*,void*);
+    int  (*keycmp)(void*,void*);
 
     struct aa_tree *t;
     char aa_tree_mem[sizeof(struct aa_tree)];
@@ -381,7 +384,9 @@ static inline void *aa_cell_val(struct aa_map_cell *c) {
 static void aa_map_cell_cpy(void *a_, void *b_) {
     struct aa_map_cell *a = a_;
     struct aa_map_cell *b = b_;
-    struct aa_map *m = a->m;
+    struct aa_map *m = b->m;
+
+    a->m = m;
     m->keycpy(aa_cell_key(a), aa_cell_key(b));
     m->valcpy(aa_cell_val(a), aa_cell_val(b));
 }
@@ -389,7 +394,7 @@ static void aa_map_cell_cpy(void *a_, void *b_) {
 static int aa_map_cell_cmp(void *a_, void *b_) {
     struct aa_map_cell *a = a_;
     struct aa_map_cell *b = b_;
-    return a->m->t->cmp(aa_cell_key(a), aa_cell_key(b));
+    return a->m->keycmp(aa_cell_key(a), aa_cell_key(b));
 }
 
 struct aa_map *aa_map_create( size_t memsize
@@ -413,6 +418,7 @@ struct aa_map *aa_map_create( size_t memsize
     m->valsize = valsize;
     m->keycpy = keycpy;
     m->valcpy = valcpy;
+    m->keycmp = cmp;
 
     m->t = aa_tree_create( sizeof(m->aa_tree_mem)
                          , m->aa_tree_mem
@@ -438,7 +444,7 @@ static inline struct aa_map_cell *aa_map_cell_init( struct aa_map *m
 
     c->m = m;
     m->keycpy(aa_cell_key(c), k);
-    if( v) {
+    if( v ) {
         m->valcpy(aa_cell_val(c), v);
     }
     return c;
@@ -450,9 +456,12 @@ bool aa_map_add(struct aa_map *m, void *k, void *v) {
 }
 
 void *aa_map_find(struct aa_map *m, void *k) {
-    struct aa_map_cell cell;
+    struct aa_map_cell cell = { 0 };
+
+    struct aa_map_cell *cp = aa_map_cell_init(m, &cell, k, 0);
+
     struct aa_map_cell *r = aa_tree_find( m->t
-                                        , aa_map_cell_init(m, &cell, k, 0));
+                                        , cp );
     return r ? aa_cell_val(r) : 0;
 }
 
@@ -460,6 +469,25 @@ void aa_map_del(struct aa_map *m, void *k) {
     struct aa_map_cell cell;
     aa_tree_remove( m->t
                   , aa_map_cell_init(m, &cell, k, 0));
+}
+
+struct aa_enum_fn_cc {
+    void *cc;
+    void (*fn)(void*,void*,void*);
+};
+
+static void __aa_enum_fn(void *cc_, void *v) {
+    struct aa_enum_fn_cc *cc = cc_;
+    cc->fn(cc->cc, aa_cell_key(v), aa_cell_val(v));
+}
+
+void aa_map_enum(struct aa_map *m, void *cc, void (*fn)(void*,void*,void*)) {
+    struct aa_enum_fn_cc rcc = { .cc = cc,  .fn = fn };
+    aa_tree_enum(m->t, &rcc, __aa_enum_fn);
+}
+
+void aa_map_destroy(struct aa_map *m) {
+    aa_tree_destroy(m->t);
 }
 
 bool aa_map_alter( struct aa_map *m
@@ -471,9 +499,6 @@ bool aa_map_alter( struct aa_map *m
                              , void*   // v
                              , bool)) {
     return false;
-}
-
-void aa_map_enum(struct aa_map *m, void *cc, void (*fn)(void*,void*,void*)) {
 }
 
 void aa_map_filter(struct aa_map *m, void *cc, bool (*fn)(void*,void*,void*)) {

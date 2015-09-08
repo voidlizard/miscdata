@@ -59,6 +59,7 @@ void aa_map_enum( struct aa_map *, void *cc, void (*fn)(void*,void*,void*));
 
 void aa_map_filter( struct aa_map *, void *cc, bool (*fn)(void*,void*,void*));
 
+void aa_map_destroy(struct aa_map *);
 
 // for debugging
 struct aa_node_info {

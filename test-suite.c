@@ -61,6 +61,7 @@ static struct test_ {
     ,{  test_aa_tree_remove_3,   "test_aa_tree_remove_3"    }
     ,{  test_aa_tree_lookup_1,   "test_aa_tree_lookup_1"    }
     ,{  test_aa_tree_clinical_1, "test_aa_tree_clinical_1"  }
+    ,{  test_aa_map_basic_1,     "test_aa_map_basic_1"  }
     ,{  0,        ""         }
 };
 
