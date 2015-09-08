@@ -19,7 +19,14 @@ struct aa_tree *aa_tree_create( size_t memsize
 
 void aa_tree_destroy(struct aa_tree *t);
 bool aa_tree_insert(struct aa_tree *t, void *v);
+
+void aa_tree_remove_with( struct aa_tree *t
+                        , void *v
+                        , void *cc
+                        , void (*fn)(void*,void*));
+
 void aa_tree_remove(struct aa_tree *t, void *v);
+
 void *aa_tree_find( struct aa_tree *t, void *v );
 
 void aa_tree_enum( struct aa_tree *t

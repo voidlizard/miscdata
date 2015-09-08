@@ -187,6 +187,8 @@ static struct aa_node *aa_node_insert( struct aa_tree *t
 static struct aa_node* aa_node_remove( struct aa_tree *t
                                      , struct aa_node *n
                                      , void *v
+                                     , void *cc
+                                     , void (*fn)(void*,void*)
                                      , struct aa_node **last
                                      , struct aa_node **deleted
                                      ) {
@@ -205,13 +207,14 @@ static struct aa_node* aa_node_remove( struct aa_tree *t
         *deleted = n;
     }
 
-    n->child[dir] = aa_node_remove(t, n->child[dir], v, last, deleted);
+    n->child[dir] = aa_node_remove(t, n->child[dir], v, cc, fn, last, deleted);
 
     if( n == *last && !aa_nil(*deleted) && !t->cmp(v, aa_value(*deleted) ) ) {
         // we're about to delete the value??
         t->cpy((*deleted)->data, n->data);
         *deleted = aa_node_null;
         n = r(n);
+        safecall(unit, fn, cc, aa_value(*last));
         t->dealloc(t->allocator, (*last));
     } else if( l(n)->level < n->level-1 || r(n)->level < n->level-1)  {
         //go up a level and rebalance?
@@ -270,9 +273,17 @@ void *aa_tree_find( struct aa_tree *t, void *v ) {
     return n ? aa_value(n) : 0;
 }
 
-void aa_tree_remove(struct aa_tree *t, void *v) {
+void aa_tree_remove_with( struct aa_tree *t
+                        , void *v
+                        , void *cc
+                        , void (*fn)(void*,void*)) {
+
     struct aa_node *l = 0, *d = 0;
-    t->root = aa_node_remove(t, t->root, v, &l, &d);
+    t->root = aa_node_remove(t, t->root, v, cc, fn, &l, &d);
+}
+
+void aa_tree_remove(struct aa_tree *t, void *v) {
+    aa_tree_remove_with(t, v, 0, 0);
 }
 
 static bool aa_tree_alter (struct aa_tree *t
