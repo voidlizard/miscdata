@@ -84,32 +84,6 @@ struct aa_tree *aa_tree_create( size_t memsize
     return t;
 }
 
-static struct aa_node *aa_node_init( struct aa_tree *t
-                                   , struct aa_node *n
-                                   , void *v) {
-
-    if( !n ) {
-        return n;
-    }
-
-    *n = aa_node_bottom;
-    n->level = 1;
-    n->child[L] = n->child[R] = aa_node_null;
-    t->cpy(&n->data[0], v);
-
-    return n;
-}
-
-static struct aa_node *aa_node_create(struct aa_tree *t, void *v) {
-    struct aa_node *n = t->alloc(t->allocator, aa_node_size + t->itemsize);
-
-    if( !n ) {
-        return 0;
-    }
-
-    return aa_node_init(t, n, v);
-}
-
 static inline size_t dir_of(int cmp) {
     return cmp < 0 ? L : R;
 }
@@ -155,6 +129,32 @@ static inline struct aa_node* aa_split(struct aa_node *n)
     }
 
     return n;
+}
+
+static struct aa_node *aa_node_init( struct aa_tree *t
+                                   , struct aa_node *n
+                                   , void *v) {
+
+    if( !n ) {
+        return n;
+    }
+
+    *n = aa_node_bottom;
+    n->level = 1;
+    n->child[L] = n->child[R] = aa_node_null;
+    t->cpy(&n->data[0], v);
+
+    return n;
+}
+
+static struct aa_node *aa_node_create(struct aa_tree *t, void *v) {
+    struct aa_node *n = t->alloc(t->allocator, aa_node_size + t->itemsize);
+
+    if( !n ) {
+        return 0;
+    }
+
+    return aa_node_init(t, n, v);
 }
 
 static struct aa_node *aa_node_insert( struct aa_tree *t
