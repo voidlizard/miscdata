@@ -64,6 +64,9 @@ static struct test_ {
     ,{  test_aa_map_basic_1,     "test_aa_map_basic_1"  }
     ,{  test_aa_map_alter_1,     "test_aa_map_alter_1"  }
     ,{  test_aa_map_filter_1,    "test_aa_map_filter_1" }
+    ,{  test_aa_map_arbitrary_kv_1, "test_aa_map_arbitrary_kv_1" }
+    ,{  test_aa_map_arbitrary_kv_2, "test_aa_map_arbitrary_kv_2" }
+    ,{  test_aa_map_arbitrary_kv_3, "test_aa_map_arbitrary_kv_3" }
     ,{  0,        ""         }
 };
 

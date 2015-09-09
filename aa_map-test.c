@@ -568,10 +568,292 @@ void test_aa_map_filter_1(void) {
     aa_map_enum(m, 0, __map_print_u32);
     fprintf(stdout, "\n");
 
-    fprintf(stdout, "wipe all");
+    fprintf(stdout, "wipe all\n");
     aa_map_filter(m, 0, 0);
+
+    size_t found = 0;
+    for(i = 0; i < N; i++ ) {
+        if( aa_map_find(m, &i) ) {
+            found++;
+        }
+    }
+
+    fprintf(stdout, "found: %zu\n", found);
+
     aa_map_enum(m, 0, __map_print_u32);
     fprintf(stdout, "\n");
 
     aa_map_destroy(m);
 }
+
+#define ARBITRARY_LEN 32
+
+static size_t __s32_cmp_n = 0;
+static size_t __s32_cpy_n = 0;
+
+static int __s32_cmp(void *a, void *b) {
+    __s32_cmp_n++;
+    return strncmp(a, b, 31);
+}
+
+static void __s32_cpy(void *a, void *b) {
+    __s32_cpy_n++;
+    strncpy(a, b, 31);
+}
+
+static void __s32_print(void *cc, void *k, void *v) {
+    fprintf(stdout, "(%s,%s)\n", (char*)k, (char*)v);
+}
+
+static bool __s32_shorter(void *cc, void *k, void *v) {
+    return strlen(k) <= *(size_t*)cc;
+}
+
+void test_aa_map_arbitrary_kv_1(void) {
+
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , ARBITRARY_LEN
+                                    , ARBITRARY_LEN
+                                    , __s32_cmp
+                                    , __s32_cpy
+                                    , __s32_cpy
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+
+
+    __s32_cmp_n = 0;
+    __s32_cpy_n = 0;
+
+    aa_map_add(m, "QQQ", "bebebe");
+
+    fprintf( stdout
+           , "adding QQQ: cmp:%zu cpy:%zu\n"
+           , __s32_cmp_n
+           , __s32_cpy_n);
+
+
+    __s32_cmp_n = 0;
+    __s32_cpy_n = 0;
+
+    aa_map_add(m, "LALA", "fa");
+
+    fprintf( stdout
+           , "adding LALA: cmp:%zu cpy:%zu\n"
+           , __s32_cmp_n
+           , __s32_cpy_n);
+
+    fprintf(stdout, "\n");
+
+    aa_map_add(m, "0", "zero");
+
+    aa_map_enum(m, 0, __s32_print);
+
+    __s32_cmp_n = 0;
+    __s32_cpy_n = 0;
+
+    aa_map_del(m, "QQQ");
+
+    fprintf( stdout
+           , "\nremoving QQQ: cmp:%zu cpy:%zu\n"
+           , __s32_cmp_n
+           , __s32_cpy_n);
+
+    aa_map_enum(m, 0, __s32_print);
+
+    aa_map_destroy(m);
+}
+
+void test_aa_map_arbitrary_kv_2(void) {
+
+    struct { char *k;
+             char *v;
+           } kvs[] = { { "A", "B"}
+                     , { "Ababa", "DEADBEEF"}
+                     , { "Q", "q"}
+                     , { "Z", "zuzuz"}
+                     , { "ABAKAN", "KANOBU"}
+                     , { "ABAKAN", "KANOBU"}
+                     , { "", "empty string"}
+                     , { "KK", "some random value, whatever"}
+                     , { "empty-val", ""}
+                     };
+
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , ARBITRARY_LEN
+                                    , ARBITRARY_LEN
+                                    , __s32_cmp
+                                    , __s32_cpy
+                                    , __s32_cpy
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+    size_t i = 0;
+    for(; i < sizeof(kvs)/sizeof(kvs[0]); i++ ) {
+        aa_map_add(m, kvs[i].k, kvs[i].v);
+    }
+
+    fprintf(stdout, "\n");
+    aa_map_enum(m, 0, __s32_print);
+
+    size_t n = 2;
+
+    fprintf(stdout, "\nfilter key length > %zu\n", n);
+
+    aa_map_filter(m, &n, __s32_shorter);
+
+    aa_map_enum(m, 0, __s32_print);
+
+    aa_map_destroy(m);
+}
+
+static char *randstr(ranctx *rnd, char *dst, size_t n, const char *dict) {
+    char *p  = dst;
+    char *pe = p + n;
+    size_t dlen = strlen(dict);
+
+    for(; p < pe; p++ ) {
+        *p = dict[ranval(rnd) % dlen];
+    }
+
+    *p = 0;
+
+    return dst;
+}
+
+static void __add_to_another(void *cc, void *k, void *v) {
+    aa_map_add(cc, k, v);
+}
+
+struct lookup_kv3_cc {
+    void *m;
+    size_t n;
+    size_t match;
+};
+
+void __lookup_kv_3(void *cc_, void *k, void *v) {
+    struct lookup_kv3_cc *cc = cc_;
+    if( aa_map_find(cc->m, k) ) {
+        cc->match++;
+    }
+    cc->n++;
+}
+
+void test_aa_map_arbitrary_kv_3(void) {
+
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , ARBITRARY_LEN
+                                    , ARBITRARY_LEN
+                                    , __s32_cmp
+                                    , __s32_cpy
+                                    , __s32_cpy
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+    struct aa_map *m2 = aa_map_create( sizeof(mem)
+                                     , mem
+                                     , ARBITRARY_LEN
+                                     , ARBITRARY_LEN
+                                     , __s32_cmp
+                                     , __s32_cpy
+                                     , __s32_cpy
+                                     , 0
+                                     , __alloc
+                                     , __dealloc
+                                     );
+
+
+    ranctx rctx;
+    raninit(&rctx, 0xDEADBEEF);
+
+    const size_t N = 1000;
+    size_t i = 0;
+
+    const char dict[] = "qwertyuiopasdfghjklzxcvbnm"
+                        "QWERTYUIOPASDFGHJKLZXCVBNM1234567890";
+
+    for(; i < N; i++ ) {
+        size_t ln1 = 1 + ranval(&rctx) % (ARBITRARY_LEN-2);
+        size_t ln2 = 1 + ranval(&rctx) % (ARBITRARY_LEN-2);
+        char k[ARBITRARY_LEN];
+        char v[ARBITRARY_LEN];
+
+        randstr(&rctx, k, ln1, dict);
+        randstr(&rctx, v, ln2, dict);
+
+        aa_map_add(m, k, v);
+
+    }
+
+    aa_map_enum(m, m2, __add_to_another);
+
+    __s32_cpy_n = 0;
+    __s32_cmp_n = 0;
+
+    fprintf(stdout, "\n");
+
+    char ks[] = "SOME STRING";
+    void *v = aa_map_find(m, ks);
+
+    fprintf(stdout
+           , "found '%s' in m: %s, cmp: %zu\n"
+           , ks
+           , v ? (char*)v : "no"
+           , __s32_cmp_n
+           );
+
+
+    __s32_cpy_n = 0;
+    __s32_cmp_n = 0;
+
+    v = aa_map_find(m2, ks);
+
+    fprintf(stdout
+           , "found '%s' in m2: %s, cmp: %zu\n"
+           , ks
+           , v ? (char*)v : "no"
+           , __s32_cmp_n
+           );
+
+    size_t n = 4;
+    aa_map_filter(m2, &n, __s32_shorter);
+
+    aa_map_enum(m2, 0, __s32_print);
+
+    __s32_cpy_n = 0;
+    __s32_cmp_n = 0;
+
+    struct lookup_kv3_cc cc = { .m = m, .n = 0, .match = 0 };
+
+    aa_map_enum(m2, &cc, __lookup_kv_3);
+
+    fprintf( stdout
+           , "lookup in m, %zu, found %zu, avg. cmp %zu (%zu)\n"
+           , cc.n
+           , cc.match
+           , __s32_cmp_n / cc.n
+           , __s32_cmp_n
+           );
+
+    aa_map_destroy(m);
+    aa_map_destroy(m2);
+}
+
+
+
+
