@@ -695,7 +695,7 @@ static void aa_node_unlink(struct aa_node *c, struct aa_node **ns) {
     aa_node_unlink(rp, ns);
 }
 
-void aa_map_filter(struct aa_map *m, void *cc, bool (*fn)(void*,void*,void*)) {
+bool aa_map_filter(struct aa_map *m, void *cc, bool (*fn)(void*,void*,void*)) {
 
     struct aa_node *ns = 0;
     aa_node_unlink(m->t->root, &ns);
@@ -703,19 +703,26 @@ void aa_map_filter(struct aa_map *m, void *cc, bool (*fn)(void*,void*,void*)) {
     struct aa_tree *t = m->t;
     t->root = aa_node_null;
 
-    while(ns) {
+    for(; ns; ) {
         void *cell = aa_value(ns);
         void *k = cell_key(cell);
         void *v = cell_val(cell);
 
         if( fn && fn(cc, k, v) ) {
-            aa_map_add(m, k, v);
+            if( !aa_tree_insert(m->t, cell) ) {
+                return false;
+            }
+
+        } else {
+            cell_cleanup(m, cell);
         }
 
         void *zombie = ns;
         ns = r(ns);
-        cell_cleanup(m, aa_value(zombie));
+
         t->dealloc(t->allocator, zombie);
     }
+
+    return true;
 }
 

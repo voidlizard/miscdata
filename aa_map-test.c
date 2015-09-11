@@ -938,4 +938,77 @@ void test_aa_map_arbitrary_kv_4(void) {
     aa_map_destroy(m);
 }
 
+static int __i64_cmp(void *a, void *b) {
+    return *(int64_t*)a - *(int64_t*)b;
+}
+
+static void __i64_cpy(void *a, void *b) {
+    *(int64_t*)a = *(int64_t*)b;
+}
+
+static void __s32_cpy_never_ever(void *a, void *b) {
+    fprintf(stdout, "__s32_cpy_never_ever\n");
+    __s32_cpy(a, b);
+}
+
+static void __kv_5_print(void *c, void *k, void *v) {
+    fprintf(stdout, "(%ld,%s)\n", *(int64_t*)k, (char*)v);
+}
+
+static void __kv_5_alter(void *cc, void *k, void *v, bool n) {
+    __s32_cpy(v, cc);
+}
+
+static bool __kv_5_filt_even(void *cc, void *k, void *v) {
+    return !(*(int64_t*)k % 2);
+}
+
+void test_aa_map_arbitrary_kv_5(void) {
+
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , ARBITRARY_LEN
+                                    , ARBITRARY_LEN
+                                    , __i64_cmp
+                                    , __i64_cpy
+                                    , __s32_cpy_never_ever
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+
+    ranctx rctx;
+    raninit(&rctx, 0xDEADBEEF);
+
+    const size_t N = 50;
+    size_t i = 0;
+
+    const char dict[] = "qwertyuiopasdfghjklzxcvbnm"
+                        "QWERTYUIOPASDFGHJKLZXCVBNM1234567890";
+
+    for(; i < N; i++ ) {
+
+        int64_t k = ranval(&rctx) % 10000;
+
+        size_t ln2 = 1 + ranval(&rctx) % (ARBITRARY_LEN-2);
+        char v[ARBITRARY_LEN];
+
+        randstr(&rctx, v, ln2, dict);
+
+        aa_map_alter(m, true, &k, v, __kv_5_alter);
+    }
+
+    aa_map_enum(m, 0, __kv_5_print);
+
+    aa_map_filter(m, 0, __kv_5_filt_even);
+
+    fprintf(stdout, "filtered\n");
+
+    aa_map_enum(m, 0, __kv_5_print);
+
+    aa_map_destroy(m);
+}
 

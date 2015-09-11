@@ -65,7 +65,7 @@ bool aa_map_alter( struct aa_map *m
 
 void aa_map_enum( struct aa_map *, void *cc, void (*fn)(void*,void*,void*));
 
-void aa_map_filter( struct aa_map *, void *cc, bool (*fn)(void*,void*,void*));
+bool aa_map_filter( struct aa_map *, void *cc, bool (*fn)(void*,void*,void*));
 
 void aa_map_destroy(struct aa_map *);
 
