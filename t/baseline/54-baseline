@@ -5,6 +5,6 @@ adding LALA: cmp:1 cpy:2
 (LALA,fa)
 (QQQ,bebebe)
 
-removing QQQ: cmp:3 cpy:2
+removing QQQ: cmp:3 cpy:0
 (0,zero)
 (LALA,fa)

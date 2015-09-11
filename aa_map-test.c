@@ -82,7 +82,7 @@ void test_aa_tree_create_1(void) {
 
     __print_u32_digraph(t, "G");
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 void test_aa_tree_remove_1_0(void) {
@@ -116,7 +116,7 @@ void test_aa_tree_remove_1_0(void) {
     __print_u32_digraph(t, "G2");
     fprintf(stdout, "\n");
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 
@@ -151,7 +151,7 @@ void test_aa_tree_remove_1_1(void) {
     __print_u32_digraph(t, "G6");
     fprintf(stdout, "\n");
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 
@@ -186,7 +186,7 @@ void test_aa_tree_remove_1_2(void) {
     __print_u32_digraph(t, "G6");
     fprintf(stdout, "\n");
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 
@@ -225,7 +225,7 @@ void test_aa_tree_remove_2(void) {
         fprintf(stdout, "\n");
     }
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 void test_aa_tree_remove_3(void) {
@@ -263,7 +263,7 @@ void test_aa_tree_remove_3(void) {
         fprintf(stdout, "\n");
     }
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 void test_aa_tree_lookup_1(void) {
@@ -327,7 +327,7 @@ void test_aa_tree_lookup_1(void) {
            , i
            , cn );
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 
@@ -393,7 +393,7 @@ void test_aa_tree_clinical_1(void) {
            , i
            , cn );
 
-    aa_tree_destroy(t);
+    aa_tree_destroy(t,0,0);
 }
 
 static void __map_print_u32(void *c, void *k, void *v) {
@@ -677,6 +677,7 @@ void test_aa_map_arbitrary_kv_2(void) {
                      , { "Ababa", "DEADBEEF"}
                      , { "Q", "q"}
                      , { "Z", "zuzuz"}
+                     , { "ABAKAN", "KANOBU"}
                      , { "ABAKAN", "KANOBU"}
                      , { "ABAKAN", "KANOBU"}
                      , { "", "empty string"}

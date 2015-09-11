@@ -17,7 +17,8 @@ struct aa_tree *aa_tree_create( size_t memsize
                               , void *(*alloc)(void*,size_t)
                               , void  (*dealloc)(void*,void*) );
 
-void aa_tree_destroy(struct aa_tree *t);
+void aa_tree_destroy(struct aa_tree *t, void *cc, void (*fn)(void*,void*));
+
 bool aa_tree_insert(struct aa_tree *t, void *v);
 
 void aa_tree_remove_with( struct aa_tree *t
