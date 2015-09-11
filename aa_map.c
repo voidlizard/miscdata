@@ -403,6 +403,9 @@ struct aa_map {
     size_t keysize;
     size_t valsize;
 
+    bool bigkey;
+    bool bigval;
+
     int  (*keycmp)(void*,void*);
     void (*keycpy)(void*,void*);
     void (*valcpy)(void*,void*);
@@ -423,7 +426,7 @@ struct cell {
     void *v;
 };
 
-const size_t ptr_size = sizeof(void*);
+static const size_t ptr_size = sizeof(void*);
 
 
 static inline void __dealloc(struct aa_map *m, void *mem) {
@@ -434,7 +437,7 @@ static inline void __dealloc(struct aa_map *m, void *mem) {
 
 static inline void *cell_key(struct cell *c) {
 
-    if( c->m->keysize <= ptr_size ) {
+    if( !c->m->bigkey ) {
         return &c->k;
     } else {
         return c->k;
@@ -445,7 +448,7 @@ static inline void *cell_key(struct cell *c) {
 
 static inline void *cell_val(struct cell *c) {
 
-    if( c->m->valsize <= ptr_size ) {
+    if( !c->m->bigval ) {
         return &c->v;
     } else {
         return c->v;
@@ -467,11 +470,11 @@ static void cell_cleanup(void *cc, void *v) {
     struct aa_map *m = cc;
     struct cell *cell = v;
 
-    if( m->keysize > ptr_size ) {
+    if( m->bigkey ) {
         __dealloc(m, cell->k);
     }
 
-    if( m->valsize > ptr_size ) {
+    if( m->bigval ) {
         __dealloc(m, cell->v);
     }
 }
@@ -500,6 +503,10 @@ struct aa_map *aa_map_create( size_t memsize
 
     m->keysize = keysize;
     m->valsize = valsize;
+
+    m->bigkey = m->keysize > ptr_size;
+    m->bigval = m->valsize > ptr_size;
+
     m->keycmp = cmp;
     m->keycpy = keycpy;
     m->valcpy = valcpy;
@@ -534,10 +541,8 @@ static inline struct cell* cell_init( struct aa_map *m
     const struct cell dummy = { .m = m, .k = 0, .v = 0 };
     *cell = dummy;
 
-    const bool small_key = m->keysize <= ptr_size;
-
     if( !v ) {
-        if( small_key ) {
+        if( !m->bigkey ) {
             m->keycpy(cell_key(cell), k);
         } else {
             cell->k = k;
@@ -545,19 +550,17 @@ static inline struct cell* cell_init( struct aa_map *m
         return cell;
     }
 
-    const bool small_val = m->valsize <= ptr_size;
-
     void *kmem = 0, *vmem = 0;
 
     do {
-        if( !small_key ) {
+        if( m->bigkey ) {
             kmem = cell->k = m->alloc(m->allocator, m->keysize);
             if( !kmem ) {
                 break;
             }
         }
 
-        if( !small_val ) {
+        if( m->bigval ) {
             vmem = cell->v = m->alloc(m->allocator, m->valsize);
             if( !vmem ) {
                 break;
