@@ -969,7 +969,7 @@ void test_aa_map_arbitrary_kv_5(void) {
 
     struct aa_map *m = aa_map_create( sizeof(mem)
                                     , mem
-                                    , ARBITRARY_LEN
+                                    , sizeof(int64_t)
                                     , ARBITRARY_LEN
                                     , __i64_cmp
                                     , __i64_cpy
@@ -1011,4 +1011,51 @@ void test_aa_map_arbitrary_kv_5(void) {
 
     aa_map_destroy(m);
 }
+
+static void __no_val_copy_1_print(void *c, void *k, void *v) {
+    fprintf(stdout, "(%ld, %ld)\n", *(int64_t*)k, *(int64_t*)v);
+}
+
+static void __no_val_copy_1_alter(void *cc, void *k, void *v, bool n) {
+    static int64_t i = 0;
+    *(int64_t*)v = i++;
+}
+
+void test_aa_map_no_val_copy_1(void) {
+
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , sizeof(int64_t)
+                                    , sizeof(int64_t)
+                                    , __i64_cmp
+                                    , __i64_cpy
+                                    , 0 // NO VALUE COPY FUNCTION
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+
+    ranctx rctx;
+    raninit(&rctx, 0xDEADBEEF);
+
+    const size_t N = 50;
+    size_t i = 0;
+
+
+    for(; i < N; i++ ) {
+
+        int64_t k = ranval(&rctx) % 100000;
+
+        aa_map_alter(m, true, &k, 0, __no_val_copy_1_alter);
+    }
+
+    aa_map_enum(m, 0, __no_val_copy_1_print);
+
+    aa_map_destroy(m);
+}
+
+
 

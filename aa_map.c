@@ -591,6 +591,10 @@ bool aa_map_add(struct aa_map *m, void *k, void *v) {
     struct cell cell;
     struct cell *cp = cell_init(m, &cell, k, v);
 
+    if( !m->valcpy ) {
+        return false;
+    }
+
     if( !cp ) {
         return false;
     }

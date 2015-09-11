@@ -69,6 +69,7 @@ static struct test_ {
     ,{  test_aa_map_arbitrary_kv_3, "test_aa_map_arbitrary_kv_3" }
     ,{  test_aa_map_arbitrary_kv_4, "test_aa_map_arbitrary_kv_4" }
     ,{  test_aa_map_arbitrary_kv_5, "test_aa_map_arbitrary_kv_5" }
+    ,{  test_aa_map_no_val_copy_1, "test_aa_map_no_val_copy_1" }
     ,{  0,        ""         }
 };
 
