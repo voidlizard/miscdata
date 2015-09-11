@@ -1,6 +1,5 @@
 #include "aa_map.h"
 
-#include <stdio.h>
 #include <assert.h>
 
 #ifndef MIN
@@ -533,6 +532,9 @@ struct aa_map *aa_map_create( size_t memsize
     return m;
 }
 
+static const uint64_t aa_map_nocopy_value_mem = 0x0101010101010101;
+static void *aa_map_nocopy_value = (void*)&aa_map_nocopy_value_mem;
+
 static inline struct cell* cell_init( struct aa_map *m
                                     , struct cell *cell
                                     , void *k
@@ -543,7 +545,7 @@ static inline struct cell* cell_init( struct aa_map *m
 
     if( !v ) {
         if( !m->bigkey ) {
-            m->keycpy(cell_key(cell), k);
+            m->keycpy(cell_key(cell), (void*)k);
         } else {
             cell->k = k;
         }
@@ -568,7 +570,10 @@ static inline struct cell* cell_init( struct aa_map *m
         }
 
         m->keycpy(cell_key(cell), k);
-        m->valcpy(cell_val(cell), v);
+
+        if( v != aa_map_nocopy_value ) {
+            m->valcpy(cell_val(cell), (void*)v);
+        }
 
         return cell;
 
@@ -628,12 +633,14 @@ void aa_map_enum(struct aa_map *m, void *cc, void (*fn)(void*,void*,void*)) {
 
 
 struct aa_map_alter_cc {
+    bool n;
     void *cc;
     void (*fn)(void*,void*,void*,bool);
 };
 
 static void aa_map_alter_fn(void *cc, void *v, bool n) {
     struct aa_map_alter_cc *acc = cc;
+    acc->n = n;
     acc->fn(acc->cc, cell_key(v), cell_val(v), n);
 }
 
@@ -646,14 +653,19 @@ bool aa_map_alter( struct aa_map *m
                              , void*   // v
                              , bool)) {
 
-    struct aa_map_alter_cc acc = { .cc = cc, .fn = fn };
+    struct aa_map_alter_cc acc = { .cc = cc, .fn = fn, .n = false };
 
     struct cell cell;
-    struct cell *cp = cell_init(m, &cell, k, 0);
 
     if( create ) {
-        return aa_tree_alter(m->t, cp, &acc, aa_map_alter_fn);
+        struct cell *cp = cell_init(m, &cell, k, aa_map_nocopy_value);
+        bool r = aa_tree_alter(m->t, cp, &acc, aa_map_alter_fn);
+        if( !acc.n ) {
+            cell_cleanup(m, cp);
+        }
+        return r;
     } else {
+        struct cell *cp = cell_init(m, &cell, k, 0);
         struct aa_node *p = 0;
         struct aa_node *n = aa_node_find(m->t, cp, m->t->root, &p);
         if( n ) {

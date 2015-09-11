@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -855,6 +856,86 @@ void test_aa_map_arbitrary_kv_3(void) {
     aa_map_destroy(m2);
 }
 
+static void __kv_4_alter(void *c, void *k, void *v, bool n) {
 
+    if( n ) {
+        __s32_cpy(v, c);
+    } else {
+        char *p = v;
+        char *pe = p + ARBITRARY_LEN;
+        for(; *p && p < pe; p++ ) {
+            *p = tolower(*p);
+        }
+    }
+}
+
+static void __kv_4_alter_up(void *c, void *k, void *v, bool n) {
+
+    if( !n ) {
+        char *p = v;
+        char *pe = p + ARBITRARY_LEN;
+        for(; *p && p < pe; p++ ) {
+            *p = toupper(*p);
+        }
+    }
+}
+
+
+void test_aa_map_arbitrary_kv_4(void) {
+
+    char mem[aa_map_size];
+
+    struct aa_map *m = aa_map_create( sizeof(mem)
+                                    , mem
+                                    , ARBITRARY_LEN
+                                    , ARBITRARY_LEN
+                                    , __s32_cmp
+                                    , __s32_cpy
+                                    , __s32_cpy
+                                    , 0
+                                    , __alloc
+                                    , __dealloc
+                                    );
+
+
+    ranctx rctx;
+    raninit(&rctx, 0xDEADBEEF);
+
+    const size_t N = 20;
+    size_t i = 0;
+
+    const char dict[] = "qwertyuiopasdfghjklzxcvbnm"
+                        "QWERTYUIOPASDFGHJKLZXCVBNM1234567890";
+
+    for(; i < N; i++ ) {
+        size_t ln1 = 1 + ranval(&rctx) % (ARBITRARY_LEN-2);
+        size_t ln2 = 1 + ranval(&rctx) % (ARBITRARY_LEN-2);
+        char k[ARBITRARY_LEN];
+        char v[ARBITRARY_LEN];
+
+        randstr(&rctx, k, ln1, dict);
+        randstr(&rctx, v, ln2, dict);
+
+        aa_map_alter(m, true, k, v, __kv_4_alter);
+        aa_map_alter(m, true, k, v, __kv_4_alter);
+        aa_map_alter(m, false, k, v, __kv_4_alter_up);
+    }
+
+    aa_map_enum(m, 0, __s32_print);
+
+    fprintf(stdout, "filtering\n");
+
+    size_t n = 8;
+    aa_map_filter(m, &n, __s32_shorter);
+
+    aa_map_enum(m, 0, __s32_print);
+
+    fprintf(stdout, "wiping\n");
+    aa_map_filter(m, 0, 0);
+
+    aa_map_enum(m, 0, __s32_print);
+
+    aa_map_destroy(m);
+}
 
 
