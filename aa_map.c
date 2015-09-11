@@ -571,7 +571,7 @@ static inline struct cell* cell_init( struct aa_map *m
 
         m->keycpy(cell_key(cell), k);
 
-        if( v != aa_map_nocopy_value ) {
+        if( v != aa_map_nocopy_value && m->valcpy ) {
             m->valcpy(cell_val(cell), (void*)v);
         }
 
@@ -588,12 +588,13 @@ static inline struct cell* cell_init( struct aa_map *m
 
 bool aa_map_add(struct aa_map *m, void *k, void *v) {
 
-    struct cell cell;
-    struct cell *cp = cell_init(m, &cell, k, v);
-
     if( !m->valcpy ) {
         return false;
     }
+
+    struct cell cell;
+    struct cell *cp = cell_init(m, &cell, k, v);
+
 
     if( !cp ) {
         return false;

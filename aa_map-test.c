@@ -1049,6 +1049,8 @@ void test_aa_map_no_val_copy_1(void) {
 
         int64_t k = ranval(&rctx) % 100000;
 
+        fprintf(stdout, "added %ld? %s\n", k, aa_map_add(m, &k, &k) ? "yes" : "no");
+
         aa_map_alter(m, true, &k, 0, __no_val_copy_1_alter);
     }
 
