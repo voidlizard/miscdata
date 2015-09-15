@@ -1,14 +1,7 @@
 #include <string.h>
 
 #include "hash.h"
-
-#ifndef MAX
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-#endif
-
-#ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
+#include "miscdata.h"
 
 struct hash_item {
     struct hash_item *next;
