@@ -6,6 +6,7 @@
 
 struct hash_item {
     struct hash_item *next;
+    uint32_t hc;
     char data[0];
 };
 
@@ -138,8 +139,9 @@ void hash_destroy(struct hash *c) {
     }
 }
 
-static struct hash_item *hash_item_create(struct hash *c, void *k, void *v) {
+static struct hash_item *hash_item_create(struct hash *c, uint32_t h, void *k, void *v) {
     struct hash_item *e = c->alloc(c->allocator, hash_item_size(c));
+    e->hc = h;
     e->next = 0;
     c->keycopy(hash_item_key(c,e), k);
 
@@ -184,9 +186,7 @@ static inline hash_rehash_step(struct hash *c) {
 
         struct hash_item *e = c->active->data[j];
         c->active->data[j] = e->next;
-
-        uint32_t hc = c->hashfun(hash_item_key(c, e));
-        hash_table_add(c->shadow, hc, e);
+        hash_table_add(c->shadow, e->hc, e);
         moved++;
     }
 
@@ -238,17 +238,15 @@ void hash_rehash_end(struct hash *c) {
 
 bool hash_add(struct hash *c, void *k, void *v) {
 
-    size_t n = c->hashfun(k);
-
     hash_rehash_step(c);
 
-    struct hash_item *e = hash_item_create(c, k, v);
+    struct hash_item *e = hash_item_create(c, c->hashfun(k), k, v);
 
     if( !e ) {
         return false;
     }
 
-    hash_table_add(to_add(c), n, e);
+    hash_table_add(to_add(c), e->hc, e);
 
     hash_rehash_start(c);
 
@@ -288,7 +286,7 @@ static inline void hash_find_all( struct hash *c
 
         while(e) {
             void *kk = hash_item_key(c,e);
-            if( c->hashfun(kk) == n && c->keycmp(kk, k)  ) {
+            if( c->keycmp(kk, k)  ) {
                 if(!fn(cc, e) ) {
                     tn = 2;
                     break;
@@ -372,15 +370,13 @@ bool hash_alter( struct hash* c
     hash_find_all(c, k, &acc, __hash_alter_every);
 
     if( !acc.n && add ) {
-
-        size_t n = c->hashfun(k);
-        struct hash_item *e = hash_item_create(c, k, 0);
+        struct hash_item *e = hash_item_create(c, c->hashfun(k), k, 0);
 
         if( !e ) {
             return false;
         }
 
-        hash_table_add(to_add(c), n, e);
+        hash_table_add(to_add(c), e->hc, e);
         fn(cc, hash_item_key(c, e), hash_item_val(c, e), true);
         acc.n++;
     }
@@ -403,11 +399,7 @@ void hash_del(struct hash *c, void *k) {
         while(e) {
             struct hash_item *it = e;
             e = e->next;
-
-            void *kk = hash_item_key(c, it);
-            uint32_t hc = c->hashfun(kk);
-
-            if( n == hc && c->keycmp(kk, k) ) {
+            if( c->keycmp(hash_item_key(c, it), k) ) {
                 c->dealloc(c->allocator, it);
             } else {
                 it->next = ne;
