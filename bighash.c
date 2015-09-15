@@ -285,8 +285,7 @@ static inline void hash_find_all( struct hash *c
         struct hash_item *e = hash_table_get(c->table[tn], n);
 
         while(e) {
-            void *kk = hash_item_key(c,e);
-            if( c->keycmp(kk, k)  ) {
+            if( c->keycmp(hash_item_key(c,e), k)  ) {
                 if(!fn(cc, e) ) {
                     tn = 2;
                     break;
