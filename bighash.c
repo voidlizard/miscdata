@@ -23,7 +23,6 @@ struct hash {
 
     size_t keysize;
     size_t valsize;
-    size_t nbuckets;
     size_t rehash_rate;
     size_t rehash_move;
 
@@ -79,7 +78,6 @@ struct hash *hash_create( size_t memsize
 
     c->keysize = keysize;
     c->valsize = valsize;
-    c->nbuckets = nbuckets;
     c->hashfun = hashfun;
     c->keycmp = keycmp;
     c->keycopy = keycopy;
@@ -93,7 +91,7 @@ struct hash *hash_create( size_t memsize
 
     c->rehash.i = 0;
 
-    if( !hash_alloc_table(c, 0, c->nbuckets) ) {
+    if( !hash_alloc_table(c, 0, nbuckets) ) {
         return 0;
     }
 
