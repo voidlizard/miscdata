@@ -16,11 +16,9 @@ struct hash_table {
     struct hash_item *data[0];
 };
 
+enum {ACTIVE = 0, SHADOW = 1};
+
 struct hash {
-
-    struct hash_table *active;
-    struct hash_table *shadow;
-
     struct hash_table *table[2];
 
     size_t keysize;
@@ -44,9 +42,10 @@ struct hash {
 
 const size_t hash_size = sizeof(struct hash);
 
+#define active(c) ((c)->table[0])
+#define shadow(c) ((c)->table[1])
+
 static inline bool hash_alloc_table(struct hash *c, size_t n, size_t buckets);
-static inline void hash_set_active(struct hash *c, size_t n);
-static inline void hash_set_shadow(struct hash *c, size_t n);
 static inline void *hash_item_key(struct hash *c, struct hash_item *e);
 static inline void *hash_item_val(struct hash *c, struct hash_item *e);
 static inline size_t hash_item_size(struct hash*);
@@ -75,8 +74,6 @@ struct hash *hash_create( size_t memsize
 
     struct hash *c = mem;
 
-    c->active = 0;
-    c->shadow = 0;
     c->table[0] = 0;
     c->table[1] = 0;
 
@@ -99,8 +96,6 @@ struct hash *hash_create( size_t memsize
     if( !hash_alloc_table(c, 0, c->nbuckets) ) {
         return 0;
     }
-
-    hash_set_active(c, 0);
 
     return c;
 }
@@ -164,12 +159,12 @@ static void hash_table_add(struct hash_table *t, size_t n, struct hash_item *e) 
 }
 
 static inline struct hash_table *to_add(struct hash *c) {
-    return c->shadow ? c->shadow : c->active;
+    return shadow(c) ? shadow(c) : active(c);
 }
 
 static inline hash_rehash_step(struct hash *c) {
 
-    if( !c->shadow ) {
+    if( !shadow(c) ) {
         return;
     }
 
@@ -177,27 +172,25 @@ static inline hash_rehash_step(struct hash *c) {
 
     size_t j = c->rehash.i;
 
-    for(; moved < c->rehash_move && j < c->active->capacity; ) {
+    for(; moved < c->rehash_move && j < active(c)->capacity; ) {
 
-        if( !c->active->data[j] ) {
+        if( !active(c)->data[j] ) {
             j++;
             continue;
         }
 
-        struct hash_item *e = c->active->data[j];
-        c->active->data[j] = e->next;
-        hash_table_add(c->shadow, e->hc, e);
+        struct hash_item *e = active(c)->data[j];
+        active(c)->data[j] = e->next;
+        hash_table_add(shadow(c), e->hc, e);
         moved++;
     }
 
     c->rehash.i = j;
 
     if( !moved ) {
-        c->dealloc(c->allocator, c->active);
-        c->active = c->shadow;
-        c->shadow = 0;
-        c->table[0] = c->active;
-        c->table[1] = c->shadow;
+        c->dealloc(c->allocator, active(c));
+        active(c) = shadow(c);
+        shadow(c) = 0;
         c->rehash.i = 0;
     }
 
@@ -206,32 +199,27 @@ static inline hash_rehash_step(struct hash *c) {
 static void hash_rehash_start(struct hash *c) {
 
     // FIXME
-    uint64_t used = c->active->used * 100;
-    uint64_t capacity = c->active->capacity;
+    uint64_t used = active(c)->used * 100;
+    uint64_t capacity = active(c)->capacity;
     uint64_t r = used / capacity;
 
-    if( c->shadow || r < c->rehash_rate ) {
+    if( shadow(c) || r < c->rehash_rate ) {
         return;
     }
 
-    size_t i = 1;
-
-    i = c->active == c->table[0] ? 1 : 0;
-
     // FIXME: various methods
-    size_t buckets = c->active->capacity * 2;
+    size_t buckets = active(c)->capacity * 2;
 
-    if( !hash_alloc_table(c, i, buckets) ) {
+    if( !hash_alloc_table(c, SHADOW, buckets) ) {
         // FIXME: error handling
         return;
     }
 
-    c->shadow = c->table[i];
     c->rehash.i = 0;
 }
 
 void hash_rehash_end(struct hash *c) {
-    while( c->shadow ) {
+    while( shadow(c) ) {
         hash_rehash_step(c);
     }
 }
@@ -476,14 +464,14 @@ void hash_stats( struct hash *c
                , size_t *maxbuck
                ) {
 
-    *capacity = c->active->capacity;
-    *used = c->active->used;
+    *capacity = active(c)->capacity;
+    *used = active(c)->used;
 
     size_t i = 0;
     size_t total = 0;
 
-    for(; i < c->active->capacity; i++ ) {
-        struct hash_item *e = c->active->data[i];
+    for(; i < active(c)->capacity; i++ ) {
+        struct hash_item *e = active(c)->data[i];
         size_t row = 0;
         for(; e; e = e->next, row++ );
         *maxbuck = row > *maxbuck ? row : *maxbuck;
@@ -526,13 +514,3 @@ static inline bool hash_alloc_table(struct hash *c, size_t n, size_t buck) {
 
     return false;
 }
-
-static inline void hash_set_active(struct hash *c, size_t n) {
-    c->active = c->table[n];
-}
-
-
-static inline void hash_set_shadow(struct hash *c, size_t n) {
-    c->shadow = c->table[n];
-}
-
