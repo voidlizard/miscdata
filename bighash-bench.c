@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -284,9 +285,34 @@ static void __rehash_dealloc(void *cc, void *mem) {
     return free(mem);
 }
 
-uint32_t __rehash_u32_hash(void *a) {
-    uint32_t z = *(uint32_t*)a;
-    return z % 2; //z; //((z + 17) % 131);
+static uint32_t __rehash_u32_hash(void *a) {
+    return *(uint32_t*)a;
+}
+
+
+static uint32_t __rehash_u64_hash(void *a) {
+
+    uint64_t v = *(uint64_t*)a;
+
+/*    uint32_t hash = 0x01010101;*/
+
+/*    hash ^= (v >> 32);*/
+/*    hash <<= 15;*/
+/*    hash ^= ( v & 0xFFFFFFFF );*/
+
+    return (uint32_t)v + (uint32_t)(v >> 31);
+}
+
+static void __rehash_alter_set(void *cc, void *k, void *v, bool n) {
+    *(uint64_t*)v = *(uint64_t*)cc;
+}
+
+static bool __u64_eq(void *a, void *b) {
+    return *(uint64_t*)a == *(uint64_t*)b;
+}
+
+static void __rehash_1_print(void *cc, void *k, void *v) {
+    fprintf(stdout, "(%zu, %zu)\n", *(uint64_t*)k, *(uint64_t*)v);
 }
 
 void test_hash_rehash_1(void) {
@@ -294,30 +320,114 @@ void test_hash_rehash_1(void) {
 
     struct hash *c = hash_create( sizeof(mem)
                                 , mem
-                                , sizeof(uint32_t)
-                                , sizeof(uint32_t)
-                                , 8
-                                , __rehash_u32_hash
-                                , __u32_eq
-                                , __u32_cpy
-                                , __u32_cpy
+                                , sizeof(uint64_t)
+                                , sizeof(uint64_t)
+                                , 32
+                                , __rehash_u64_hash
+                                , __u64_eq
+                                , __u64_cpy
+                                , __u64_cpy
                                 , 0
                                 , __rehash_alloc
                                 , __rehash_dealloc
                                 );
-    ranctx rctx;
-    raninit(&rctx, 0xDEADBEEF);
 
-    const size_t N = 1000;
+    struct track {
+        size_t altered;
+        bool deleted;
+        uint64_t key;
+        uint64_t val;
+    };
+
+    ranctx rctx, rctx2, rctx3;
+    raninit(&rctx, 0xDEADBEEF);
+    raninit(&rctx2, 0xDEADBEEF);
+    raninit(&rctx3, 0x01010101010);
+
+    const size_t N = 500000;
     size_t i = 0;
+
+    struct track *track = calloc(1, sizeof(struct track) * N);
+
+    assert( track );
 
     hash_set_rehash_values(c, 75, 100);
 
+    size_t d = 0, a = 0;
+
     for(; i < N; i++ ) {
-        uint32_t key = ranval(&rctx) % 1000000;
-        uint32_t val = ranval(&rctx) % 10000;
+        uint64_t key = ranval(&rctx);
+        uint64_t val = i;
+
         hash_add(c, &key, &val);
+
+        track[i].deleted = false;
+        track[i].key = key;
+        track[i].val = val;
+
+        uint64_t j = ranval(&rctx3) % (i+1);
+
+        if( j == i || track[j].deleted ) {
+            continue;
+        }
+
+        if( !(ranval(&rctx3) % 5) ) {
+            track[j].val *= 100;
+            hash_alter( c
+                      , false
+                      , &track[j].key
+                      , &track[j].val
+                      , __rehash_alter_set);
+
+            if( !track[j].altered ) {
+                track[j].altered++;
+                a++;
+            }
+        } else if( !(ranval(&rctx3) % 51) ) {
+            hash_del(c, &track[j].key);
+            track[j].deleted = true;
+            d++;
+        }
     }
+
+    size_t deleted = 0, altered = 0, diversed = 0;
+
+    for(i = 0; i < N; i++ ) {
+
+        uint64_t k = track[i].key;
+        void *v = hash_get(c, &track[i].key);
+
+        if( track[i].deleted ) {
+
+            if( !v ) {
+                deleted++;
+            } else {
+                diversed++;
+            }
+
+        } else if( v ) {
+            if( !__u64_eq(v, &track[i].val) ) {
+                diversed++;
+            }
+
+            uint64_t ii = i;
+            if( !__u64_eq(v, &ii) ) {
+                altered++;
+            }
+
+        } else {
+            diversed++;
+        }
+    }
+
+    fprintf( stdout
+           , "deleted: %zu (%zu), altered %zu (%zu) diversed: %zu\n"
+           , deleted
+           , d
+           , altered
+           , a
+           , diversed
+           );
 
     hash_rehash_end(c);
 
@@ -335,9 +445,9 @@ void test_hash_rehash_1(void) {
            , maxb
            );
 
+    free(track);
     hash_destroy(c);
 }
-
 
 int main(void) {
 /*    test_hash_create_1();*/
