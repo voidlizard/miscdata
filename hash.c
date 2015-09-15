@@ -75,7 +75,7 @@ struct hash *hash_create( size_t memsize
                         , void    (*dealloc)(void*,void*)
                         ) {
 
-    if( memsize < hash_size ) {
+    if( memsize < hash_size || !mem ) {
         return 0;
     }
 
