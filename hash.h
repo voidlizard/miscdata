@@ -1,5 +1,5 @@
-#ifndef __HASH_H__
-#define __HASH_H__
+#ifndef __BIGHASH_H__
+#define __BIGHASH_H__
 
 #include <stddef.h>
 #include <stdint.h>
@@ -7,22 +7,29 @@
 
 struct hash;
 
-struct hash *hash_create( void  *mem
-                        , size_t memsize
+extern const size_t hash_size;
+
+struct hash *hash_create( size_t memsize
+                        , void  *mem
                         , size_t keysize
                         , size_t valsize
+                        , size_t nbuckets
                         , uint32_t (*hashfun)(void *)
                         , bool     (*keycmp)(void *, void *)
                         , void     (*keycopy)(void *, void *)
-                        , void     (*valcopy)(void *, void *));
+                        , void     (*valcopy)(void *, void *)
+                        , void   *allocator
+                        , void   *(*alloc)(void*,size_t)
+                        , void    (dealloc)(void*,void*)
+                        );
 
-size_t hash_mem_size(size_t n, size_t key_len, size_t val_len);
+void hash_set_rehash_values(struct hash *c, uint8_t fill, size_t n);
 
-bool hash_grow(struct hash *c, void *mem, size_t memsize);
+void hash_rehash_end(struct hash *c);
 
-void hash_shrink(struct hash *, void*, void (*)(void*, void*));
+void hash_destroy(struct hash*);
 
-bool hash_exhausted(struct hash *c);
+bool hash_shrink(struct hash *, bool);
 
 bool hash_add(struct hash *c, void *k, void *v);
 
@@ -39,38 +46,22 @@ bool hash_alter( struct hash* c
                , bool add
                , void *k
                , void *ctx
-               , void (*) (void *, void *, void *) );
+               , void (*) (void *, void *, void *, bool));
 
-bool hash_alter2( struct hash *c
-                , bool add
-                , void *k
+
+void hash_enum( struct hash *c
+              , void *cc
+              , void (*)(void *, void *, void *));
+
+void hash_filter( struct hash *c
                 , void *cc
-                , void (*cb) (void *, void *, void *, bool) );
+                , bool (*cb)(void *, void *, void *));
 
-void hash_enum_items( struct hash *c
-                    , void *cc
-                    , void (*)(void *, void *, void *));
-
-void hash_filter_items( struct hash *c
-                      , void *cc
-                      , bool (*cb)(void *, void *, void *));
-
-
-void *hash_get_add(struct hash *c, void *k, void *v);
-
-
-void hash_memory_info( struct hash *c
-                     , size_t *chunk_hdr_size
-                     , size_t *item_size
-                     );
-
-void hash_set_autogrow( struct hash*
-                      , size_t
-                      , void *
-                      , void *(*alloc)(void *, size_t)
-                      , void (*dealloc)(void*, void *));
-
-void hash_auto_shrink(struct hash *);
+void hash_stats( struct hash *c
+               , size_t *capacity
+               , size_t *used
+               , size_t *collisions
+               , size_t *maxbuck
+               );
 
 #endif
-

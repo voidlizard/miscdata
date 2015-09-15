@@ -29,27 +29,21 @@ static struct test_ {
     ,{  test_dradix_15,  "test_dradix_15"  }
     ,{  test_dradix_16,  "test_dradix_16"  }
     ,{  test_dradix_17,  "test_dradix_17"  }
-    ,{  test_hash_create_1, "test_hash_create_1"  }
-    ,{  test_hash_create_2, "test_hash_create_2 (str key)" }
-    ,{  test_hash_alter_1, "test_hash_alter_1" }
-    ,{  test_hash_filter_1, "test_hash_filter_1" }
     ,{  test_dradix_18,  "test_dradix_18"  }
     ,{  test_slist_filt_destructive_1,  "test_slist_filt_destructive_1" }
     ,{  test_slist_filt_destructive_2,  "test_slist_filt_destructive_2" }
     ,{  test_slist_partition_destructive_1,  "test_slist_partition_destructive_1" }
     ,{  test_slist_char_array_1,  "test_slist_char_array_1" }
-    ,{  test_hash_grow_1,  "test_hash_grow_1" }
-    ,{  test_hash_shrink_1,"test_hash_shrink_1" }
-    ,{  test_hash_bad_1,"test_hash_bad_1" }
-    ,{  test_hash_find_1,"test_hash_find_1" }
-    ,{  test_hash_get_add_1, "test_hash_get_add_1" }
-    ,{  test_hash_autogrow_1, "test_hash_autogrow_1" }
+    ,{  test_hash_create_1,  "test_hash_create_1" }
+    ,{  test_hash_create_2,  "test_hash_create_2" }
+    ,{  test_hash_create_3,  "test_hash_create_3" }
+    ,{  test_hash_rehash_1,  "test_hash_rehash_1" }
+    ,{  test_hash_shrink_1,  "test_hash_shrink_1" }
     ,{  test_clos_1,       "test_clos_1" }
     ,{  test_heap_test_1,  "test_heap_test_1" }
     ,{  test_heap_test_2,  "test_heap_test_2" }
     ,{  test_heap_test_3,  "test_heap_test_3" }
     ,{  test_heap_test_4,  "test_heap_test_4" }
-    ,{  test_hash_mem_size_1,  "test_hash_mem_size_1" }
     ,{  test_substr_1,      "test_substr_1" }
     ,{  test_skiplist_1,    "test_skiplist_1" }
     ,{  test_skiplist_2,    "test_skiplist_2" }

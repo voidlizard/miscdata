@@ -7,115 +7,201 @@
 #include <inttypes.h>
 #include "hash.h"
 
-static uint32_t u64hash(void *k)
-{
-    uint64_t v = *(uint64_t *) k;
-    uint32_t h = v;
+#include "prng.h"
 
-    return h + ((h >> 2) | (h << 30));
+static void *__alloc(void *cc, size_t n) {
+    void *mem = malloc(n);
+/*    fprintf(stderr, "alloc %p\n", mem);*/
+    return mem;
 }
 
-static uint32_t u64hash_bad(void *k)
-{
-    return 0;
+static void __dealloc(void *cc, void *mem) {
+/*    fprintf(stderr, "free %p\n", mem);*/
+    free(mem);
 }
 
-static bool u64cmp(void *a, void *b)
-{
-    return *(uint64_t *) a == *(uint64_t *) b;
+static uint32_t __u32_hash(void *a) {
+    return *(uint32_t*)a;
 }
 
-static void u64cpy(void *dst, void *k)
-{
-    memcpy(dst, k, sizeof(uint64_t));
+static bool __u32_eq(void *a, void *b) {
+    return *(uint32_t*)a == *(uint32_t*)b;
 }
 
-void test_hash_create_1(void)
-{
-    static char mem[4096];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(uint64_t)
-                                , sizeof(uint64_t)
-                                , u64hash
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy);
+static void __u32_cpy(void *a, void *b) {
+    *(uint32_t*)a = *(uint32_t*)b;
+}
 
-    fprintf( stdout, "??? hash create %s\n"
-           , c != NULL ? "succeed" : "failed");
 
-    if( c == NULL ) {
-        return;
+static void __create_print_1(void *cc, void *k, void *v) {
+    fprintf(stdout, "(%u,%u)\n", *(uint32_t*)k, *(uint32_t*)v);
+    if( cc ) {
+        (*(size_t*)cc)++;
+    }
+}
+
+static void __create_alter_1(void *cc, void *k, void *v, bool n) {
+    *(uint32_t*)v = 0;
+    fprintf( stdout
+           , "alter: %s (%u,%u)\n"
+           , n ? "new" : "old"
+           , *(uint32_t*)k
+           , *(uint32_t*)v
+           );
+}
+
+static void __create_alter_2(void *cc, void *k, void *v, bool n) {
+    if( !n ) {
+        (*(uint32_t*)v) ++;
+    }
+}
+
+static bool __create_1_less_than(void *cc, void *v, void *k) {
+    return *(uint32_t*)v < *(uint32_t*)cc;
+}
+
+void test_hash_create_1(void) {
+
+    char mem[hash_size];
+
+    struct hash *c = hash_create( sizeof(mem)
+                                , mem
+                                , sizeof(uint32_t)
+                                , sizeof(uint32_t)
+                                , 16
+                                , __u32_hash
+                                , __u32_eq
+                                , __u32_cpy
+                                , __u32_cpy
+                                , 0
+                                , __alloc
+                                , __dealloc
+                                );
+
+    const size_t N = 10;
+    size_t i = 0;
+
+    for(; i < N; i++ ) {
+        uint32_t k = i;
+        uint32_t v = 1;
+        hash_add(c, &k, &v);
     }
 
-    uint64_t i = 0;
+    hash_enum(c, 0, __create_print_1);
 
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 10000;
+    for(i = 0; i < N; i++ ) {
+        uint32_t k = i;
+        void *v = hash_get(c, &k);
+        fprintf(stdout, "%zu: (%u, %u)\n", i, k, v?*(uint32_t*)v:-1);
+    }
 
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
+    size_t j = 0;
+    for(; j < 3; j++ ) {
+        for(i = 0; i < N; i++ ) {
+            hash_del(c, &i);
+            size_t cnt = 0;
+            hash_enum(c, &cnt, __create_print_1);
+            if( cnt ) {
+                fprintf(stdout, "---\n");
+            }
         }
     }
 
-    fprintf(stdout, "??? hash items added: %" PRId64 "\n", i);
+    fprintf(stdout, "alter\n");
 
-    uint64_t j = 0;
-
-    for( j = 0; j < i; j++ ) {
-        uint64_t *v = hash_get(c, &j);
-
-        if( v ) {
-            fprintf( stdout, "??? hash get: %" PRIu64 " -> %" PRIu64 "\n"
-                   , j
-                   , *v);
-        } else {
-            fprintf(stdout, "!!! hash get: %" PRIu64 " -> NONE\n", j);
-        }
+    for(i = 100; i < 1000; i += 50 ) {
+        uint32_t k = i;
+        hash_alter(c, true, &k, 0, __create_alter_1);
     }
 
+    fprintf(stdout, "---\n");
+    hash_enum(c, 0, __create_print_1);
 
-    fprintf(stdout, "??? del even values\n");
-
-    for( j = 0; j < i; j+= 2 ) {
-        hash_del(c, &j);
+    for(i = 100; i < 1000; i += 50 ) {
+        uint32_t k = i;
+        hash_alter(c, false, &k, 0, __create_alter_2);
     }
 
-    for( j = 0; j < i; j++ ) {
-        uint64_t *v = hash_get(c, &j);
+    fprintf(stdout, "---\n");
+    hash_enum(c, 0, __create_print_1);
 
-        if( v != NULL ) {
-            fprintf( stdout, "??? hash get: %" PRIu64 " -> %" PRIu64 "\n"
-                   , j
-                   , *v);
-        } else {
-            fprintf(stdout, "??? hash get: %" PRIu64 " -> NONE\n", j);
-        }
-    }
+    size_t le = 500;
+    hash_filter(c, &le, __create_1_less_than);
 
-    fprintf(stdout, "??? add even values\n");
+    fprintf(stdout, "---\n");
+    hash_enum(c, 0, __create_print_1);
 
-    for( j = 0; j < i; j+= 2 ) {
-        uint64_t tmp = j + 20000;
-
-        hash_add(c, &j, &tmp);
-    }
-
-    for( j = 0; j < i; j++ ) {
-        uint64_t *v = hash_get(c, &j);
-
-        if( v ) {
-            fprintf( stdout, "??? hash get: %" PRIu64 " -> %" PRIu64 "\n"
-                   , j
-                   , *v);
-        } else {
-            fprintf(stdout, "!!! hash get: %" PRIu64 " -> NONE\n", j);
-        }
-    }
+    hash_destroy(c);
 }
 
-static uint32_t shash(void *k)
+static void __u32_val_succ(void *cc, void *k, void *v, bool n) {
+
+    if( !n ) {
+        (*(uint32_t*)v) ++;
+    } else {
+        *(uint32_t*)v = 1;
+    }
+
+}
+
+static bool __filt_even_val_1(void *cc, void *k, void *v) {
+    return !(*(uint32_t*)v % 2);
+}
+
+void test_hash_create_2(void) {
+
+    char mem[hash_size];
+
+    struct hash *c = hash_create( sizeof(mem)
+                                , mem
+                                , sizeof(uint32_t)
+                                , sizeof(uint32_t)
+                                , 16
+                                , __u32_hash
+                                , __u32_eq
+                                , __u32_cpy
+                                , __u32_cpy
+                                , 0
+                                , __alloc
+                                , __dealloc
+                                );
+
+
+    uint32_t k = 1, v = 10;
+    hash_add(c, &k, &v);
+    hash_add(c, &k, &v);
+    hash_add(c, &k, &v);
+    hash_add(c, &k, &v);
+
+    k = 2; v = 20;
+    hash_add(c, &k, &v);
+    hash_add(c, &k, &v);
+
+    k = 3; v = 30;
+    hash_add(c, &k, &v);
+
+    hash_enum(c, 0, __create_print_1);
+
+    k = 1;
+    hash_alter(c, false, &k, 0, __u32_val_succ);
+
+    k = 2;
+    hash_alter(c, false, &k, 0, __u32_val_succ);
+
+    fprintf(stdout, "\n");
+    hash_enum(c, 0, __create_print_1);
+
+    hash_filter(c, 0, __filt_even_val_1);
+
+    fprintf(stdout, "\n");
+    hash_enum(c, 0, __create_print_1);
+
+    hash_destroy(c);
+}
+
+#define CSTRING_MAX 128
+
+static uint32_t __cstring_hash(void *k)
 {
     char *s = k;
     uint32_t hash = 5381;
@@ -128,641 +214,358 @@ static uint32_t shash(void *k)
     return hash;
 }
 
-static bool scmp32(void *k0, void *k1)
-{
-    return (0 == strncmp(k0, k1, 32));
+static bool __cstring_eq(void *a, void *b) {
+    return 0 == strncmp(a, b, CSTRING_MAX);
 }
 
-static void scpy32(void *dst, void *src)
-{
-    strncpy(dst, src, 32);
+static void __cstring_cpy(void *a, void *b) {
+    strncpy(a, b, CSTRING_MAX);
 }
 
-void test_hash_create_2(void)
-{
-    static char mem[4096];
-    char tmp[32];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(char[32])
+static void __u64_cpy(void *a, void *b) {
+    *(uint64_t*)a = *(uint64_t*)b;
+}
+
+static void __create_3_print(void *c, void *k, void *v) {
+    fprintf(stdout, "(%s,%zu)\n", (char*)k, *(uint64_t*)v);
+}
+
+static void __create_3_set_value(void *c, void *k, void *v, bool n) {
+    *(uint64_t*)v = *(uint64_t*)c;
+}
+
+void test_hash_create_3(void) {
+
+    char mem[hash_size];
+
+    struct hash *c = hash_create( sizeof(mem)
+                                , mem
+                                , CSTRING_MAX
                                 , sizeof(uint64_t)
-                                , shash
-                                , scmp32
-                                , scpy32
-                                , u64cpy);
-    size_t i = 0;
+                                , 16
+                                , __cstring_hash
+                                , __cstring_eq
+                                , __cstring_cpy
+                                , __u64_cpy
+                                , 0
+                                , __alloc
+                                , __dealloc
+                                );
 
-    for( ; ; i++ ) {
-        snprintf(tmp, sizeof(tmp), "KEY-%04zx", i);
-
-        if( !hash_add(c, tmp, &i) ) {
-            break;
-        }
-
-        fprintf(stdout, "??? %s %zu\n", tmp, i);
-    }
-
-    fprintf(stdout, "??? entries added: %zu\n", i);
-
-    size_t j = 0;
-
-    for( ; j < i; j++) {
-        snprintf(tmp, sizeof(tmp), "KEY-%04zx", j);
-
-        uint64_t *v = hash_get(c, tmp);
-
-        if( v ) {
-            fprintf(stdout, "??? Found: %s %" PRIu64"\n", tmp, *v);
-        } else {
-            fprintf(stdout, "*** Not found: %s\n", tmp);
-        }
-    }
-
-    for( j = 0; j < 10; j++ ) {
-        snprintf(tmp, sizeof(tmp), "KEY-%04zx", j);
-        hash_del(c, &tmp);
-    }
-
-    fprintf(stdout, "??? entries deleted: %u\n", 10);
-
-    size_t k = 0;
-
-    for( k = i; ; k++ ) {
-        snprintf(tmp, sizeof(tmp), "NEW-KEY-%04zx", k);
-
-        if( !hash_add(c, tmp, &k) ) {
-            break;
-        }
-
-        fprintf(stdout, "??? %s %zu\n", tmp, k);
-    }
-
-    fprintf(stdout, "??? new entries added: %zu\n", k - i);
-}
-
-static void set_num(void *cc, void *k, void *v)
-{
-    *((size_t *) v) = *((size_t *) cc);
-}
-
-static void add_100(void *cc, void *k, void *v)
-{
-    *((size_t *) v) += 100;
-}
-
-static void dump_item(void *cc, void *k, void *v)
-{
-    fprintf( stdout
-           , "??? %s %" PRIu64 "\n"
-           , (char *) k
-           , *((uint64_t *) v));
-}
-
-void test_hash_alter_1(void)
-{
-    static char mem[2048];
-    char tmp[32];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(char[32])
-                                , sizeof(uint64_t)
-                                , shash
-                                , scmp32
-                                , scpy32
-                                , u64cpy);
-
-    assert( c );
+    struct {
+        char *k;
+        uint64_t v;
+    } kvs[] = { { "AAAAA", 21 }
+              , { "EBEB", 234 }
+              , { "EBEB", 500 }
+              , { "zzz", 10 }
+              , { "mooo", 12 }
+              };
 
     size_t i = 0;
-
-    for( ; ; i++ ) {
-        snprintf(tmp, sizeof(tmp), "K%zd", i);
-
-        if( !hash_alter(c, true, tmp, &i, set_num) ) {
-            break;
-        }
-
-        fprintf(stdout, "??? %s %zu\n", tmp, i);
+    for(; i < sizeof(kvs)/sizeof(kvs[0]); i++ ) {
+        hash_add(c, kvs[i].k, &kvs[i].v);
     }
 
-    fprintf(stdout, "??? enum items\n");
-    hash_enum_items(c, NULL, dump_item);
+    hash_enum(c, 0, __create_3_print);
 
-    fprintf(stdout, "??? add 100 to evens\n");
+    uint64_t n = 0;
+    hash_alter(c, false, "EBEB", &n, __create_3_set_value);
 
-    size_t j = 0;
+    fprintf(stdout, "\n");
+    hash_enum(c, 0, __create_3_print);
 
-    for( ; j < i + 100; j += 2 ) {
-        snprintf(tmp, sizeof(tmp), "K%zd", j);
-        hash_alter(c, false, tmp, &i, add_100);
-    }
-
-    hash_enum_items(c, NULL, dump_item);
-
-    fprintf(stdout, "??? del K15 and K16\n");
-
-    snprintf(tmp, sizeof(tmp), "K%d", 15);
-    hash_del(c, tmp);
-
-    snprintf(tmp, sizeof(tmp), "K%d", 16);
-    hash_del(c, tmp);
-
-    hash_enum_items(c, NULL, dump_item);
-
-
-    fprintf(stdout, "??? alter K15 and K16\n");
-
-    size_t v = 15;
-
-    snprintf(tmp, sizeof(tmp), "K%d", 15);
-    hash_alter(c, false, tmp, &v, set_num);
-
-    snprintf(tmp, sizeof(tmp), "K%d", 16);
-    v = 16;
-    hash_alter(c, true, tmp, &v, set_num);
-
-    hash_enum_items(c, NULL, dump_item);
-}
-
-static void dump_int_int(void *cc, void *k, void *v)
-{
-    fprintf( stdout
-           , "??? %" PRIu64 " %"PRIu64"\n"
-           , *(uint64_t *) k
-           , *(uint64_t *) v);
-}
-
-static bool filt_even_keys(void *cc, void *k, void *v)
-{
-    return  (0 == (*(uint64_t *) k) % 2);
-}
-
-void test_hash_filter_1(void)
-{
-    static char mem[2048];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(uint64_t)
-                                , sizeof(uint64_t)
-                                , u64hash
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy );
-
-    fprintf(stdout, "??? hash create %s\n", c ? "succeed" : "failed");
-
-    assert(c);
-
-    uint64_t i = 0;
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    fprintf(stdout, "??? hash items added: %" PRIu64 "\n", i);
-
-    hash_enum_items(c, NULL, dump_int_int);
-
-    fprintf(stdout, "??? del odd values\n");
-
-    hash_filter_items(c, NULL, filt_even_keys);
-
-    hash_enum_items(c, NULL, dump_int_int);
+    hash_destroy(c);
 }
 
 
-void test_hash_grow_1(void)
-{
-    static char mem[1024];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(uint64_t)
-                                , sizeof(uint64_t)
-                                , u64hash
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy );
-
-    fprintf(stdout, "??? hash create %s\n", c ? "succeed" : "failed");
-
-    assert(c);
-
-    uint64_t i = 0;
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    fprintf(stdout, "??? hash items added: %" PRIu64 "\n", i);
-
-    hash_enum_items(c, NULL, dump_int_int);
-
-    char new_chunk[512];
-    if( hash_grow(c, new_chunk, sizeof(new_chunk)) ) {
-        fprintf(stdout, "hash enlarged (1) ok\n");
-    }
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    hash_enum_items(c, NULL, dump_int_int);
-
-    char new_chunk_2[512];
-    if( hash_grow(c, new_chunk_2, sizeof(new_chunk_2)) ) {
-        fprintf(stdout, "hash enlarged (2) ok\n");
-    }
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    hash_enum_items(c, NULL, dump_int_int);
+static void* __rehash_alloc(void *cc, size_t n) {
+    return malloc(n);
 }
 
-
-static bool filt_gt_eq(void *cc, void *k, void *v)
-{
-    uint64_t *c = (uint64_t*)cc;
-    return  *c > (*(uint64_t *)k);
+static void __rehash_dealloc(void *cc, void *mem) {
+    return free(mem);
 }
 
-static void __dealloc_chunk(void *_, void *mem) {
-    fprintf(stderr, "dealloc chunk %zu\n", (size_t)mem);
-    free(mem);
+static uint32_t __rehash_u64_hash(void *a) {
+
+    uint64_t v = *(uint64_t*)a;
+    return (uint32_t)v + (uint32_t)(v >> 31);
 }
 
-void test_hash_shrink_1(void)
-{
-    static char mem[1024];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(uint64_t)
-                                , sizeof(uint64_t)
-                                , u64hash
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy );
-
-    fprintf(stdout, "??? hash create %s\n", c ? "succeed" : "failed");
-
-    assert(c);
-
-    uint64_t i = 0;
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    fprintf(stdout, "??? hash items added: %" PRIu64 "\n", i);
-
-    hash_enum_items(c, NULL, dump_int_int);
-
-    uint64_t del0 = i;
-    void *b = malloc(1024);
-    fprintf(stderr, "allocated: %zu\n", (size_t)b);
-    if( hash_grow(c, b, 1024) ) {
-        fprintf(stdout, "hash enlarged (1) ok\n");
-    }
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    hash_enum_items(c, NULL, dump_int_int);
-
-    void *b1 = malloc(512);
-    fprintf(stderr, "allocated: %zu\n", (size_t)b1);
-    if( hash_grow(c, b1, 512) ) {
-        fprintf(stdout, "hash enlarged (2) ok\n");
-    }
-
-    size_t del_from = i;
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    fprintf(stdout, "hash dump\n");
-    hash_enum_items(c, NULL, dump_int_int);
-
-    fprintf(stdout, "deleted items greater than %zu\n", del_from);
-    hash_filter_items(c, &del_from, filt_gt_eq);
-    hash_enum_items(c, NULL, dump_int_int);
-
-    hash_shrink(c, 0, __dealloc_chunk);
-
-    hash_filter_items(c, &del0, filt_gt_eq);
-    fprintf(stdout, "deleted items greater than %zu\n", del0);
-    hash_enum_items(c, NULL, dump_int_int);
-
-    uint64_t tmp = 10;
-    hash_filter_items(c, &tmp, filt_gt_eq);
-
-    hash_shrink(c, 0, __dealloc_chunk);
-
-    fprintf(stdout, "exhausted: %s\n", hash_exhausted(c) ? "yes" : "no");
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    fprintf(stdout, "add some items\n");
-    hash_enum_items(c, NULL, dump_int_int);
-    fprintf(stdout, "exhausted: %s\n", hash_exhausted(c) ? "yes" : "no");
-}
-
-
-void __new_uint(void *cc, void *k, void *v) {
+static void __rehash_alter_set(void *cc, void *k, void *v, bool n) {
     *(uint64_t*)v = *(uint64_t*)cc;
 }
 
-void test_hash_bad_1(void)
-{
-    static char mem[4096];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
+static bool __u64_eq(void *a, void *b) {
+    return *(uint64_t*)a == *(uint64_t*)b;
+}
+
+void test_hash_rehash_1(void) {
+    char mem[hash_size];
+
+    struct hash *c = hash_create( sizeof(mem)
+                                , mem
                                 , sizeof(uint64_t)
                                 , sizeof(uint64_t)
-                                , u64hash_bad
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy);
+                                , 32
+                                , __rehash_u64_hash
+                                , __u64_eq
+                                , __u64_cpy
+                                , __u64_cpy
+                                , 0
+                                , __rehash_alloc
+                                , __rehash_dealloc
+                                );
 
-    fprintf( stdout, "??? hash create %s\n"
-           , c != NULL ? "succeed" : "failed");
+    struct track {
+        size_t altered;
+        bool deleted;
+        uint64_t key;
+        uint64_t val;
+    };
 
-    if( c == NULL ) {
-        return;
-    }
+    ranctx rctx, rctx2, rctx3;
+    raninit(&rctx, 0xDEADBEEF);
+    raninit(&rctx2, 0xDEADBEEF);
+    raninit(&rctx3, 0x01010101010);
 
-    uint64_t i = 0;
+    const size_t N = 500000;
+    size_t i = 0;
 
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 10000;
+    struct track *track = calloc(1, sizeof(struct track) * N);
 
-        if( !hash_alter(c, true, &i, &tmp, __new_uint) ) {
-            break;
+    assert( track );
+
+    hash_set_rehash_values(c, 75, 100);
+
+    size_t d = 0, a = 0;
+
+    for(; i < N; i++ ) {
+        uint64_t key = ranval(&rctx);
+        uint64_t val = i;
+
+        hash_add(c, &key, &val);
+
+        track[i].deleted = false;
+        track[i].key = key;
+        track[i].val = val;
+
+        uint64_t j = ranval(&rctx3) % (i+1);
+
+        if( j == i || track[j].deleted ) {
+            continue;
         }
-        fprintf(stdout, "add: %zu %zu\n", i, tmp);
+
+        if( !(ranval(&rctx3) % 5) ) {
+            track[j].val *= 100;
+            hash_alter( c
+                      , false
+                      , &track[j].key
+                      , &track[j].val
+                      , __rehash_alter_set);
+
+            if( !track[j].altered ) {
+                track[j].altered++;
+                a++;
+            }
+        } else if( !(ranval(&rctx3) % 51) ) {
+            hash_del(c, &track[j].key);
+            track[j].deleted = true;
+            d++;
+        }
     }
 
-    uint64_t j = 0;
+    size_t deleted = 0, altered = 0, diversed = 0;
 
-    for( j = 0; j < i; j++ ) {
-        uint64_t *v = hash_get(c, &j);
-        fprintf(stdout, "get: %zu %zu\n", j, v ? *v : 0 );
+    for(i = 0; i < N; i++ ) {
+
+        void *v = hash_get(c, &track[i].key);
+
+        if( track[i].deleted ) {
+
+            if( !v ) {
+                deleted++;
+            } else {
+                diversed++;
+            }
+
+        } else if( v ) {
+            if( !__u64_eq(v, &track[i].val) ) {
+                diversed++;
+            }
+
+            uint64_t ii = i;
+            if( !__u64_eq(v, &ii) ) {
+                altered++;
+            }
+
+        } else {
+            diversed++;
+        }
     }
-
-}
-
-
-
-static void test_hash_find_1_cb(void *cc, void *e) {
-    uint64_t k = *(uint64_t*)cc;
-    uint64_t v = *(uint64_t*)e;
-    fprintf(stdout, "hash_find(%zu): %zu\n", k, v);
-}
-
-void test_hash_find_1(void)
-{
-    static char mem[4096];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(uint64_t)
-                                , sizeof(uint64_t)
-                                , u64hash_bad
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy);
-
-    fprintf( stdout, "??? hash create %s\n"
-           , c != NULL ? "succeed" : "failed");
-
-    if( c == NULL ) {
-        return;
-    }
-
-    uint64_t i = 1, j = 0;
-
-    for( ; j < 10; j++ ) {
-        hash_add(c, &i, &j);
-    }
-
-
-    uint64_t *v = hash_get(c, &i);
-    char tmp[16] = {0};
-    char *p = 0;
-
-    if( v ) {
-        snprintf(tmp, sizeof(tmp)-1, "%zu", *v);
-        p = tmp;
-    }
-
-    fprintf(stdout, "hash_get(%zu): %s\n", i, p);
-
-    hash_find(c, &i, &i, test_hash_find_1_cb);
-
-    i = 2;
-    j = 10;
-
-    for( ; j < 50; j += 10 ) {
-        hash_add(c, &i, &j);
-    }
-
-    hash_find(c, &i, &i, test_hash_find_1_cb);
-
-}
-
-void test_hash_get_add_1_cb(void *cc, void *k_, void *v_) {
-    uint64_t *k = (uint64_t*)k_;
-    uint64_t *v = (uint64_t*)v_;
 
     fprintf( stdout
-           , "hash_item %zu %zu\n"
-           , *k
-           , *v );
+           , "deleted: %zu (%zu), altered %zu (%zu) diversed: %zu\n"
+           , deleted
+           , d
+           , altered
+           , a
+           , diversed
+           );
+
+    hash_rehash_end(c);
+
+    size_t cap = 0, used = 0, cls = 0, maxb = 0;
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+    free(track);
+    hash_destroy(c);
 }
 
-void test_hash_get_add_1(void)
-{
-    static char mem[4096];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
+static bool __shrink_1_filt(void *cc, void *k, void *v) {
+
+    if( !(*(uint64_t*)k % 2) ) {
+        return true;
+    }
+
+    (*(size_t*)cc)++;
+    return false;
+}
+
+
+static bool __shrink_1_filt_less(void *cc, void *k, void *v) {
+
+    return *(uint64_t*)k < *(uint64_t*)cc;
+}
+
+void test_hash_shrink_1(void) {
+    char mem[hash_size];
+
+    struct hash *c = hash_create( sizeof(mem)
+                                , mem
                                 , sizeof(uint64_t)
                                 , sizeof(uint64_t)
-                                , u64hash
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy);
+                                , 32
+                                , __rehash_u64_hash
+                                , __u64_eq
+                                , __u64_cpy
+                                , __u64_cpy
+                                , 0
+                                , __rehash_alloc
+                                , __rehash_dealloc
+                                );
 
-    fprintf( stdout, "??? hash create %s\n"
-           , c != NULL ? "succeed" : "failed");
+    ranctx rctx;
+    raninit(&rctx, 0xDEADBEEF);
 
-    if( c == NULL ) {
-        return;
+    const size_t N = 1000;
+    size_t i = 0;
+
+    hash_set_rehash_values(c, 75, 10000);
+
+    for(; i < N; i++ ) {
+        uint64_t key = i;
+        uint64_t val = ranval(&rctx) % 1000000;
+
+        hash_add(c, &key, &val);
     }
 
-    uint64_t i = 0, j = 0;
+    size_t cap = 0, used = 0, cls = 0, maxb = 0;
+    hash_stats(c, &cap, &used, &cls, &maxb);
 
-    for( ; j < 50; j++, i += 10 ) {
-        uint64_t  *v = hash_get_add(c, &j, &i);
-        if( !v ) {
-            break;
-        }
-    }
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
 
-    hash_enum_items(c, 0, test_hash_get_add_1_cb);
 
-    for( j = 0; j < 50; j++) {
-        uint64_t  *v = hash_get_add(c, &j, &i);
-        if( !v ) {
-            break;
-        }
-        *v = j;
-    }
+    size_t zu = 0;
+    hash_filter(c, &zu, __shrink_1_filt);
 
-    fprintf(stdout, "\n\n");
-    hash_enum_items(c, 0, test_hash_get_add_1_cb);
+    fprintf(stdout, "\nfiltered %zu\n\n", zu);
 
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+
+    fprintf(stdout, "\nshrink\n\n");
+    hash_shrink(c, true);
+
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+    zu = 100;
+    hash_filter(c, &zu, __shrink_1_filt_less);
+
+    fprintf(stdout, "\nfiltered > %zu\n\n", zu);
+
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+    hash_shrink(c, true);
+    fprintf(stdout, "\nshrink\n\n");
+
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+    hash_destroy(c);
 }
-
-static void *__test_hash_autogrow_alloc(void *cc, size_t len) {
-    (void)cc;
-    return malloc(len);
-}
-
-static void __test_hash_autogrow_dealloc(void *cc, void *mem) {
-    (void)cc;
-    free(mem);
-}
-
-void test_hash_autogrow_1(void)
-{
-    static char mem[1024];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(uint64_t)
-                                , sizeof(uint64_t)
-                                , u64hash
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy );
-
-    fprintf(stdout, "??? hash create %s\n", c ? "succeed" : "failed");
-
-    assert(c);
-
-    uint64_t i = 0;
-    uint64_t l1 = 0;
-
-    for( ; ; i++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    l1 = i;
-
-    fprintf(stdout, "??? hash items added: %" PRIu64 "\n", i);
-
-    hash_enum_items(c, NULL, dump_int_int);
-
-    hash_set_autogrow( c
-                     , 0
-                     , 0
-                     , __test_hash_autogrow_alloc
-                     , __test_hash_autogrow_dealloc);
-
-
-    uint64_t n = 0;
-    for( ; n < 10000; i++, n++ ) {
-        uint64_t tmp = i + 1000;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-
-    fprintf(stdout, "extra items added: %zu\n", n);
-
-    for(; i >= l1; i-- ) {
-        hash_del(c, &i);
-    }
-
-    fprintf(stdout, "extra items removed\n");
-
-    hash_enum_items(c, NULL, dump_int_int);
-    hash_auto_shrink(c);
-
-}
-
-static void __dump_u64_u64(void *cc, void *k, void *v) {
-    fprintf(stdout, "%ld %ld\n", *(uint64_t*)k, *(uint64_t*)v);
-}
-
-void test_hash_mem_size_1(void)
-{
-
-    size_t hmemsize = hash_mem_size(10, sizeof(uint64_t), sizeof(uint64_t));
-    fprintf(stderr, "hmemsize %ld\n", hmemsize);
-
-    char mem[hmemsize];
-    struct hash *c = hash_create( mem
-                                , sizeof(mem)
-                                , sizeof(uint64_t)
-                                , sizeof(uint64_t)
-                                , u64hash
-                                , u64cmp
-                                , u64cpy
-                                , u64cpy);
-
-    assert( c );
-
-    uint64_t i = 0;
-    for( ; ; i++ ) {
-        uint64_t tmp = i;
-
-        if( !hash_add(c, &i, &tmp) ) {
-            break;
-        }
-    }
-    fprintf(stdout, "hash items added: %ld\n", i);
-    hash_enum_items(c, 0, __dump_u64_u64);
-}
-
 
