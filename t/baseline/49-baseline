@@ -1,2 +1,16 @@
-inserted 262144, max. cmp: 24 ops
-found 166125 of 262144, max. cmp: 48 ops
+
+(,empty string)
+(A,B)
+(ABAKAN,KANOBU)
+(Ababa,DEADBEEF)
+(KK,some random value, whatever)
+(Q,q)
+(Z,zuzuz)
+(empty-val,)
+
+filter key length > 2
+(,empty string)
+(A,B)
+(KK,some random value, whatever)
+(Q,q)
+(Z,zuzuz)

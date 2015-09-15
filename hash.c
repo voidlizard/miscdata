@@ -1,511 +1,572 @@
+#include <string.h>
+
 #include "hash.h"
 
-#include <assert.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
-
-#include "slist.h"
-
-#ifndef HASH_BUCKETS
-#define HASH_BUCKETS 64
+#ifndef MAX
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
-#define safecall(v, f, ...) ((f) ? (f(__VA_ARGS__)) : (v))
-#define unit                {}
+#ifndef MIN
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
-#define HASH(A)             ((A) % HASH_BUCKETS)
+struct hash_item {
+    struct hash_item *next;
+    uint32_t hc;
+    char data[0];
+};
 
-// implementation
+struct hash_table {
+    size_t used;
+    size_t capacity;
+    struct hash_item *data[0];
+};
+
+enum {ACTIVE = 0, SHADOW = 1};
 
 struct hash {
-    size_t     keysize;
-    size_t     valsize;
-    slist    **buckets;
-    slist     *free;
+    struct hash_table *table[2];
+
+    size_t keysize;
+    size_t valsize;
+    size_t rehash_move;
+    uint8_t fill_rate;
+
+    struct {
+        size_t i;
+    } rehash;
+
     uint32_t (*hashfun)(void *);
     bool     (*keycmp)(void *, void *);
     void     (*keycopy)(void *, void *);
     void     (*valcopy)(void *, void *);
-    void      *alloc_cc;
-    void     *(*alloc_fn)(void*,size_t);
-    void      (*dealloc_fn)(void*,void*);
-    char      *pool;
-    slist     *mem_chunks;
-    char      mem[0];
+    void   *allocator;
+    void   *(*alloc)(void*,size_t);
+    void    (*dealloc)(void*,void*);
 };
 
-struct hash_bucket {
-    uint32_t hashcode;
-    char     data[0];
-};
+const size_t hash_size = sizeof(struct hash);
 
-struct hash_mem_chunk {
-    size_t size;
-    size_t refcount;
-};
+#define active(c) ((c)->table[0])
+#define shadow(c) ((c)->table[1])
 
-static void __hash_alloc_new_chunk(struct hash *h);
+static inline bool hash_alloc_table(struct hash *c, size_t n, size_t buckets);
+static inline void *hash_item_key(struct hash *c, struct hash_item *e);
+static inline void *hash_item_val(struct hash *c, struct hash_item *e);
+static inline size_t hash_item_size(struct hash*);
 
-static inline size_t __hash_bucket_size(size_t ksize, size_t vsize) {
-    return (sizeof(struct hash_bucket) + (ksize) + (vsize));
+static inline size_t upper_pow2(size_t);
+
+static inline size_t bucket(struct hash_table *c, size_t n) {
+    return n % c->capacity;
 }
 
-static inline size_t __hash_entry_len(struct hash *c)
-{
-    return __hash_bucket_size(c->keysize, c->valsize);
-}
-
-static inline void *__hash_key(struct hash *c, void *chunk)
-{
-    struct hash_bucket *b = (struct hash_bucket*)chunk;
-    return &b->data[0];
-}
-
-static inline void *__hash_val(struct hash *c, void *chunk)
-{
-    struct hash_bucket *b = (struct hash_bucket*)chunk;
-    return &b->data[c->keysize];
-}
-
-struct hash* hash_create( void  *mem
-                        , size_t memsize
+struct hash *hash_create( size_t memsize
+                        , void  *mem
                         , size_t keysize
                         , size_t valsize
+                        , size_t nbuckets
                         , uint32_t (*hashfun)(void *)
                         , bool     (*keycmp)(void *, void *)
                         , void     (*keycopy)(void *, void *)
                         , void     (*valcopy)(void *, void *)
-                        )
-{
-    const size_t buck_num     = HASH_BUCKETS;
-    const size_t buckets_size = buck_num*sizeof(slist*);
+                        , void   *allocator
+                        , void   *(*alloc)(void*,size_t)
+                        , void    (*dealloc)(void*,void*)
+                        ) {
 
-    size_t poolsz = memsize - sizeof(struct hash) - buckets_size;
-    const size_t bsize = slist_size(__hash_bucket_size(keysize, valsize));
-
-    if( poolsz < sizeof(struct hash) + bsize) {
-        return NULL;
+    if( memsize < hash_size ) {
+        return 0;
     }
 
-    struct hash *c = (struct hash *) mem;
+    struct hash *c = mem;
 
-    c->buckets = (slist**)&c->mem[0];
-    c->pool    = &c->mem[buckets_size];
+    c->table[0] = 0;
+    c->table[1] = 0;
 
     c->keysize = keysize;
     c->valsize = valsize;
     c->hashfun = hashfun;
-    c->keycmp  = keycmp;
+    c->keycmp = keycmp;
     c->keycopy = keycopy;
     c->valcopy = valcopy;
+    c->allocator = allocator;
+    c->alloc = alloc;
+    c->dealloc = dealloc;
 
-    c->free = slist_pool( c->pool
-                        , slist_size(__hash_entry_len(c))
-                        , poolsz);
+    c->fill_rate = 75;
+    c->rehash_move = 10000;
 
-    c->mem_chunks = slist_nil();
+    c->rehash.i = 0;
 
-    size_t i = 0;
-
-
-    for( ; i < buck_num; i++ ) {
-        c->buckets[i] = slist_nil();
+    if( !hash_alloc_table(c, ACTIVE, nbuckets) ) {
+        return 0;
     }
-
-
-    c->alloc_cc = 0;
-    c->alloc_fn = 0;
 
     return c;
 }
 
-bool hash_exhausted(struct hash *c) {
-    assert(c != NULL);
-    return c->free == NULL;
+void hash_set_rehash_values(struct hash *c, uint8_t r, size_t n) {
+    c->fill_rate = MAX(50, MIN(r, 90));
+    c->rehash_move = n;
 }
 
-bool hash_grow(struct hash *c, void *mem, size_t memsize) {
-    assert(c != NULL);
+void hash_destroy(struct hash *c) {
+    size_t h = 0;
+    for(; h < 2; h++ ) {
 
-    const size_t hl = slist_size(__hash_entry_len(c));
-    const size_t hdrlen = slist_size(sizeof(struct hash_mem_chunk));
+        struct hash_table *t = c->table[h];
 
-    if( mem == NULL || memsize < hdrlen + hl ) {
+        if( !t ) {
+            continue;
+        }
+
+        size_t i = 0;
+        for(; i < t->capacity; i++ ) {
+            struct hash_item *e = t->data[i];
+            while(e) {
+                void *zombie = e;
+                e = e->next;
+                c->dealloc(c->allocator, zombie);
+            }
+        }
+    }
+
+    if( c->table[0] ) {
+        c->dealloc(c->allocator, c->table[0]);
+    }
+    if( c->table[1] ) {
+        c->dealloc(c->allocator, c->table[1]);
+    }
+}
+
+static struct hash_item *hash_item_create(struct hash *c, uint32_t h, void *k, void *v) {
+    struct hash_item *e = c->alloc(c->allocator, hash_item_size(c));
+    e->hc = h;
+    e->next = 0;
+    c->keycopy(hash_item_key(c,e), k);
+
+    if( v ) {
+        c->valcopy(hash_item_val(c,e), v);
+    }
+
+    return e;
+}
+
+static void hash_table_add(struct hash_table *t, size_t n, struct hash_item *e) {
+    const size_t i = bucket(t, n);
+    e->next = t->data[i];
+
+    if( !t->data[i] && e ) {
+        t->used++;
+    }
+
+    t->data[i] = e;
+}
+
+static inline struct hash_table *to_add(struct hash *c) {
+    return shadow(c) ? shadow(c) : active(c);
+}
+
+static inline void hash_rehash_step(struct hash *c) {
+
+    if( !shadow(c) ) {
+        return;
+    }
+
+    size_t moved = 0;
+
+    size_t j = c->rehash.i;
+
+    for(; moved < c->rehash_move && j < active(c)->capacity; ) {
+
+        if( !active(c)->data[j] ) {
+            j++;
+            continue;
+        }
+
+        struct hash_item *e = active(c)->data[j];
+        active(c)->data[j] = e->next;
+        hash_table_add(shadow(c), e->hc, e);
+        moved++;
+    }
+
+    c->rehash.i = j;
+
+    if( !moved ) {
+        c->dealloc(c->allocator, active(c));
+        active(c) = shadow(c);
+        shadow(c) = 0;
+        c->rehash.i = 0;
+    }
+
+}
+
+static void hash_rehash_start(struct hash *c) {
+
+    uint64_t used = active(c)->used * 100;
+    uint64_t capacity = active(c)->capacity;
+    uint64_t r = used / capacity;
+
+    if( shadow(c) || r < c->fill_rate ) {
+        return;
+    }
+
+    // FIXME: various methods
+    size_t buckets = active(c)->capacity * 2;
+
+    if( !hash_alloc_table(c, SHADOW, buckets) ) {
+        // FIXME: error handling
+        return;
+    }
+
+    c->rehash.i = 0;
+}
+
+void hash_rehash_end(struct hash *c) {
+    while( shadow(c) ) {
+        hash_rehash_step(c);
+    }
+}
+
+bool hash_add(struct hash *c, void *k, void *v) {
+
+    hash_rehash_step(c);
+
+    struct hash_item *e = hash_item_create(c, c->hashfun(k), k, v);
+
+    if( !e ) {
         return false;
     }
 
-    slist *e = mem;
-    c->mem_chunks = slist_cons(e, c->mem_chunks);
+    hash_table_add(to_add(c), e->hc, e);
 
-    size_t poolsz = memsize - hdrlen - hl;
+    hash_rehash_start(c);
 
-    slist *fl = slist_pool_(c->free, &e->value[hdrlen], hl, poolsz);
+    return true;
+}
 
-    struct hash_mem_chunk *hdr = (struct hash_mem_chunk*)&e->value;
-    hdr->size = memsize;
+static inline struct hash_item *hash_table_get(struct hash_table *t, size_t n) {
+    return t->data[bucket(t, n)];
+}
 
-    if( fl != NULL ) {
-        c->free = fl;
+static inline void hash_table_update(struct hash_table *t, size_t n, struct hash_item *e) {
+    size_t i = bucket(t, n);
+
+    if( t->data[i] && !e && t->used ) {
+        t->used--;
+    }
+
+    t->data[i] = e;
+}
+
+static inline void hash_find_all( struct hash *c
+                                , void *k
+                                , void *cc
+                                , bool (*fn)(void*,struct hash_item*)) {
+
+    uint32_t n = c->hashfun(k);
+
+    size_t col = 0;
+
+    size_t tn = 0;
+
+    for( ;tn < 2; tn++ ) {
+
+        if( !c->table[tn] ) {
+            continue;
+        }
+
+        struct hash_item *e = hash_table_get(c->table[tn], n);
+
+        while(e) {
+            if( c->keycmp(hash_item_key(c,e), k)  ) {
+                if(!fn(cc, e) ) {
+                    tn = 2;
+                    break;
+                }
+            }
+            col++; // number of collisions
+            e = e->next;
+        }
+    }
+
+    // TODO:
+    if( 0 ) { // wtf ?
+        // begin rehashing
+    }
+}
+
+static bool __hash_find_first(void *cc, struct hash_item *it) {
+    *(struct hash_item**)cc = it;
+    return false;
+}
+
+void *hash_get(struct hash *c, void *k) {
+
+    struct hash_item *it = 0;
+    hash_find_all(c, k, &it, __hash_find_first);
+    return it ? hash_item_val(c, it) : 0;
+}
+
+struct hash_find_cc {
+    struct hash *hash;
+    void *cc;
+    void (*cb)(void*,void*);
+};
+
+static bool __hash_find_every(void *cc_, struct hash_item *e) {
+    struct hash_find_cc *cc = cc_;
+    cc->cb(cc->cc, hash_item_val(cc->hash, e));
+    return true;
+}
+
+void hash_find( struct hash *c
+              , void *k
+              , void *cc
+              , void (*cb) (void *cc, void *v)) {
+
+
+    struct hash_find_cc fcc = { .hash = c, .cc = cc, cb = cb };
+    hash_find_all(c, k, &fcc, __hash_find_every);
+}
+
+struct hash_alter_cc {
+    struct hash *hash;
+    void *cc;
+    void (*fn) (void *, void *, void *, bool);
+    size_t n;
+};
+
+static bool __hash_alter_every(void *cc, struct hash_item *e) {
+
+    struct hash_alter_cc *acc = cc;
+
+    acc->fn( acc->cc
+           , hash_item_key(acc->hash, e)
+           , hash_item_val(acc->hash, e)
+           , false);
+
+    acc->n++;
+
+    return true;
+}
+
+bool hash_alter( struct hash* c
+               , bool add
+               , void *k
+               , void *cc
+               , void (*fn) (void *, void *, void *, bool)) {
+
+    hash_rehash_step(c);
+
+    struct hash_alter_cc acc = { .hash = c, .cc = cc, fn = fn };
+    hash_find_all(c, k, &acc, __hash_alter_every);
+
+    if( !acc.n && add ) {
+        struct hash_item *e = hash_item_create(c, c->hashfun(k), k, 0);
+
+        if( !e ) {
+            return false;
+        }
+
+        hash_table_add(to_add(c), e->hc, e);
+        fn(cc, hash_item_key(c, e), hash_item_val(c, e), true);
+        acc.n++;
+    }
+
+    return acc.n != 0;
+}
+
+void hash_del(struct hash *c, void *k) {
+    uint32_t n = c->hashfun(k);
+    size_t tn = 0;
+    for(; tn < 2; tn++ ) {
+
+        if( !c->table[tn] ) {
+            continue;
+        }
+
+        struct hash_item *e = hash_table_get(c->table[tn], n);
+        struct hash_item *ne = 0;
+
+        while(e) {
+            struct hash_item *it = e;
+            e = e->next;
+            if( c->keycmp(hash_item_key(c, it), k) ) {
+                c->dealloc(c->allocator, it);
+            } else {
+                it->next = ne;
+                ne = it;
+            }
+        }
+
+        hash_table_update(c->table[tn], n, ne);
+    }
+}
+
+void hash_filter( struct hash *c
+                , void *cc
+                , bool (*cb)(void *, void *, void *)) {
+
+    size_t tn = 0;
+    for(; tn < 2; tn++ ) {
+
+        struct hash_table *t = c->table[tn];
+
+        if( !t ) {
+            continue;
+        }
+
+        size_t i = 0;
+        for(; i < t->capacity; i++ ) {
+            struct hash_item *e = t->data[i];
+            struct hash_item *ne = 0;
+            while(e) {
+                struct hash_item *it = e;
+                e = e->next;
+                void *k = hash_item_key(c, it);
+                void *v = hash_item_val(c, it);
+                if( cb && cb(cc, k, v) ) {
+                    it->next = ne;
+                    ne = it;
+                } else {
+                    c->dealloc(c->allocator, it);
+                }
+            }
+
+            if( t->data[i] && !ne && t->used ) {
+                t->used--;
+            }
+            t->data[i] = ne;
+        }
+    }
+}
+
+void hash_enum( struct hash *c
+              , void *cc
+              , void (*cb)(void *, void *, void *)) {
+
+
+    size_t tn = 0;
+    for(; tn < 2; tn++ ) {
+
+        struct hash_table *t = c->table[tn];
+
+        if( !t ) {
+            continue;
+        }
+
+        size_t i = 0;
+        for(; i < t->capacity; i++ ) {
+            struct hash_item *it =  t->data[i];
+            for(; it; it = it->next ) {
+                cb(cc, hash_item_key(c, it), hash_item_val(c, it));
+            }
+        }
+    }
+
+}
+
+bool hash_shrink(struct hash *c, bool complete) {
+    hash_rehash_end(c);
+
+    if( shadow(c) ) {
+        // FIXME: error
+        return false;
+    }
+
+    const size_t u = active(c)->used;
+    const size_t f = c->fill_rate;
+
+    size_t capacity = upper_pow2(u + (u*100 - u*f)/100);
+
+    if( capacity > active(c)->capacity/2 ) {
+        return false;
+    }
+
+    if( !hash_alloc_table(c, SHADOW, capacity) ) {
+        return false;
+    }
+
+    c->rehash.i = 0;
+
+    if( complete ) {
+        hash_rehash_end(c);
+    }
+
+    return true;
+}
+
+
+void hash_stats( struct hash *c
+               , size_t *capacity
+               , size_t *used
+               , size_t *collisions
+               , size_t *maxbuck
+               ) {
+
+    *capacity = active(c)->capacity;
+    *used = active(c)->used;
+
+    size_t i = 0;
+    size_t total = 0;
+
+    for(; i < active(c)->capacity; i++ ) {
+        struct hash_item *e = active(c)->data[i];
+        size_t row = 0;
+        for(; e; e = e->next, row++ );
+        *maxbuck = row > *maxbuck ? row : *maxbuck;
+        total += row ? row - 1 : 0;
+    }
+
+    *collisions = *used ? total / *used : 0;
+}
+
+
+static size_t hash_item_size(struct hash *c) {
+    return sizeof(struct hash_item) + c->keysize + c->valsize;
+}
+
+static inline void *hash_item_key(struct hash *c, struct hash_item *e) {
+    return &e->data[0];
+}
+
+static inline void *hash_item_val(struct hash *c, struct hash_item *e) {
+    return &e->data[c->keysize];
+}
+
+static inline size_t hash_table_size(size_t n) {
+    return sizeof(struct hash_table) + n*sizeof(struct hash_table*);
+}
+
+static inline bool hash_alloc_table(struct hash *c, size_t n, size_t buck) {
+
+    void *mem = c->alloc(c->allocator, hash_table_size(buck));
+
+    if( mem ) {
+        struct hash_table *tbl = mem;
+        tbl->capacity = buck;
+        tbl->used = 0;
+        memset(tbl->data, 0, buck*sizeof(void*));
+        c->table[n] = tbl;
         return true;
+
     }
 
     return false;
 }
 
-static void __chunk_reset_refcount(void *cc, void *ch) {
-    struct hash_mem_chunk *hdr = (struct hash_mem_chunk*)ch;
-    hdr->refcount = 0;
-}
-
-static void __mark_chunk(void *v, void *chunk) {
-    struct hash_mem_chunk *hdr = (struct hash_mem_chunk*)chunk;
-
-    const char *ra = (char*)chunk;
-    const char *rb = ra + hdr->size;
-    const char *e  = (char*)v;
-
-    if( e > ra && e < rb ) {
-        hdr->refcount++;
-    }
-
-}
-
-static void __mark_chunks(void *ch, void *v) {
-    slist_foreach((slist*)ch, v, __mark_chunk);
-}
-
-static bool __chunk_used(void *cc, void *e) {
-    struct hash_mem_chunk *hdr = (struct hash_mem_chunk*)e;
-    return hdr->refcount > 0;
-}
-
-static bool __not_belongs_to_deleted_chunk(void *c, void *v) {
-    struct hash_mem_chunk *hdr = (struct hash_mem_chunk*)c;
-
-    const char *ra = (char*)c;
-    const char *rb = ra + hdr->size;
-    const char *e  = (char*)v;
-
-    const bool belongs = e > ra && e < rb;
-
-    return !belongs;
-}
-
-void hash_shrink(struct hash *c, void *cc, void (*dealloc)(void*, void*)) {
-    assert(c != NULL);
-
-    slist_foreach(c->mem_chunks, 0, __chunk_reset_refcount);
-
-    size_t idx = 0;
-
-    for( idx = 0; idx < HASH_BUCKETS; idx++ ) {
-        slist_foreach(c->buckets[idx], c->mem_chunks, __mark_chunks);
-    }
-
-    slist *to_del = slist_nil();
-    slist_partition_destructive( &c->mem_chunks
-                               , &to_del
-                               , 0
-                               , __chunk_used
-                               );
-
-
-    while( to_del ) {
-        slist *e = slist_uncons(&to_del);
-
-        slist_filt_destructive( &c->free
-                               , e->value
-                               , __not_belongs_to_deleted_chunk
-                               , 0
-                               , 0
-                               );
-
-        if( e && dealloc ) {
-            dealloc(cc, e);
-            continue;
-        }
-        break;
-    }
-}
-
-static inline slist* __hash_find(struct hash *c, void *k)
+static inline size_t upper_pow2(size_t v)
 {
-    const uint32_t hash_1 = c->hashfun(k);
-    slist *it = c->buckets[HASH(hash_1)];
-
-    for( ; it; it = it->next ) {
-        struct hash_bucket *b = (struct hash_bucket*)it->value;
-        void *hk =__hash_key(c, it->value);
-        if( hash_1 == b->hashcode ) {
-            if( c->keycmp(k, hk) ) {
-                return it;
-            }
-        }
-    }
-
-    return NULL;
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
 }
 
-
-void hash_find(struct hash *c, void *k, void *cc, void (*cb) (void*, void*) )
-{
-    const uint32_t hash_1 = c->hashfun(k);
-    slist *it = c->buckets[HASH(hash_1)];
-
-    for( ; it; it = it->next ) {
-        struct hash_bucket *b = (struct hash_bucket*)it->value;
-        void *hk =__hash_key(c, it->value);
-        if( hash_1 == b->hashcode ) {
-            if( c->keycmp(k, hk) ) {
-                cb(cc, __hash_val(c, it->value));
-            }
-        }
-    }
-}
-
-
-void *hash_get(struct hash *c, void *k)
-{
-    slist *it = __hash_find(c, (void *) k);
-    return it ? __hash_val(c, it->value) : NULL;
-}
-
-void hash_enum_items( struct hash *c
-                    , void *cc
-                    , void (*cb)(void *, void *, void *))
-{
-    assert(c != NULL);
-
-    size_t idx = 0;
-
-    for( idx = 0; idx < HASH_BUCKETS; idx++ ) {
-        slist *it = c->buckets[idx];
-
-        for( ; it; it = it->next ) {
-            safecall( unit
-                    , cb
-                    , cc
-                    , __hash_key(c, it->value)
-                    , __hash_val(c, it->value));
-        }
-    }
-}
-
-void hash_filter_items( struct hash *c
-                      , void *cc
-                      , bool (*cb)(void *, void *, void *))
-{
-    assert(c != NULL);
-
-    size_t idx = 0;
-
-    for( idx = 0; idx < HASH_BUCKETS; idx++ ) {
-        slist *lnew = slist_nil();
-
-        for( ; c->buckets[idx]; ) {
-            slist *it=slist_uncons(&c->buckets[idx]);
-
-            bool leave = safecall( false
-                                 , cb
-                                 , cc
-                                 , __hash_key(c, it->value)
-                                 , __hash_val(c, it->value));
-
-            if( leave ) {
-                lnew = slist_cons(it, lnew);
-            } else {
-                c->free = slist_cons(it, c->free);
-            }
-        }
-
-        c->buckets[idx] = lnew;
-    }
-}
-
-static inline slist *__hash_add_entry(struct hash *c, void *k)
-{
-    assert(c != NULL);
-
-    const uint32_t hashcode = c->hashfun(k);
-
-    size_t idx = HASH(hashcode);
-
-    if( hash_exhausted(c) ) {
-        __hash_alloc_new_chunk(c);
-    }
-
-    slist *it = slist_uncons(&c->free);
-
-    if( it == NULL ) {
-        return NULL;
-    }
-
-    c->buckets[idx] = slist_cons(it, c->buckets[idx]);
-
-    struct hash_bucket *b = (struct hash_bucket*)it->value;
-    b->hashcode = hashcode;
-
-    safecall(unit, c->keycopy, __hash_key(c,it->value), k);
-
-    return it;
-}
-
-bool hash_add(struct hash* c, void *k, void *v)
-{
-    slist *it = __hash_add_entry(c,k);
-
-    if( it == NULL ) {
-        return false;
-    }
-
-    safecall(unit, c->valcopy, __hash_val(c, it->value), v);
-
-    return true;
-}
-
-void *hash_get_add(struct hash *c, void *k, void *v) {
-    void *v_ = hash_get(c, k);
-
-    if( v_ ) {
-        return v_;
-    }
-
-    if( !hash_add(c, k, v) ) {
-        return 0;
-    }
-
-    return hash_get(c, k);
-}
-
-void hash_del( struct hash *c, void *k)
-{
-    assert(c != NULL);
-
-    size_t idx = HASH(safecall(0, c->hashfun, k));
-
-    slist *lnew = slist_nil();
-
-    for( ; c->buckets[idx]; ) {
-        slist *it=slist_uncons(&c->buckets[idx]);
-
-        if( c->keycmp(k, __hash_key(c, it->value)) ) {
-            c->free = slist_cons(it, c->free);
-        } else {
-            lnew = slist_cons(it, lnew);
-        }
-    }
-
-    c->buckets[idx] = lnew;
-}
-
-bool hash_alter( struct hash *c
-               , bool add
-               , void *k
-               , void *cc
-               , void (*cb) (void *, void *, void *) )
-{
-    assert(c != NULL);
-
-    slist *it = __hash_find(c, k);
-
-    if( it == NULL && add ) {
-        it = __hash_add_entry(c, k);
-    }
-
-    if( it == NULL ) {
-        return false;
-    }
-
-    safecall( unit
-            , cb
-            , cc
-            , __hash_key(c, it->value)
-            , __hash_val(c, it->value));
-
-    return true;
-}
-
-bool hash_alter2( struct hash *c
-                , bool add
-                , void *k
-                , void *cc
-                , void (*cb) (void *, void *, void *, bool) )
-{
-    assert(c != NULL);
-
-    slist *it = __hash_find(c, k);
-
-    bool new_item = false;
-
-    if( it == NULL && add ) {
-        it = __hash_add_entry(c, k);
-        new_item = true;
-    }
-
-    if( it == NULL ) {
-        return false;
-    }
-
-    safecall( unit
-            , cb
-            , cc
-            , __hash_key(c, it->value)
-            , __hash_val(c, it->value)
-            , new_item );
-
-    return true;
-}
-
-
-void hash_set_autogrow( struct hash *h
-                      , size_t limit
-                      , void *cc
-                      , void *(*alloc)(void *, size_t)
-                      , void (*dealloc)(void*, void *)) {
-    h->alloc_cc = cc;
-    h->alloc_fn = alloc;
-    h->dealloc_fn = dealloc;
-}
-
-void hash_auto_shrink(struct hash *c) {
-    if( c->dealloc_fn ) {
-        hash_shrink(c, c->alloc_cc, c->dealloc_fn);
-    }
-}
-
-size_t hash_mem_size(size_t n, size_t kl, size_t vl) {
-    size_t chunk = slist_size(__hash_bucket_size(kl, vl));
-    return sizeof(struct hash) + n*chunk + HASH_BUCKETS*sizeof(slist*);
-}
-
-static void __hash_alloc_new_chunk(struct hash *h) {
-    const size_t page_size = 4096;
-    const size_t min_items = 4;
-    const size_t hl = slist_size(__hash_entry_len(h));
-    const size_t hdrlen = slist_size(sizeof(struct hash_mem_chunk));
-    const size_t memrest = page_size - hdrlen;
-
-    assert( page_size > hdrlen );
-
-    const size_t n = hl*2 < memrest ? memrest/hl
-                                    : min_items;
-
-    const size_t chunk_len = hdrlen + n*hl;
-
-    if( !h->alloc_fn || !h->dealloc_fn ) {
-        return;
-    }
-
-    void *mem = h->alloc_fn(h->alloc_cc, chunk_len);
-    (void)hash_grow(h, mem, chunk_len);
-}
-
-void hash_memory_info( struct hash *c
-                     , size_t *chunk_hdr_size
-                     , size_t *item_size
-                     ) {
-    *item_size = slist_size(__hash_entry_len(c));
-    *chunk_hdr_size = slist_size(sizeof(struct hash_mem_chunk));
-}
 
