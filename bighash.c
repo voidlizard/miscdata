@@ -4,6 +4,14 @@
 
 #include "bighash.h"
 
+#ifndef MAX
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
+#ifndef MIN
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
 struct hash_item {
     struct hash_item *next;
     uint32_t hc;
@@ -23,8 +31,8 @@ struct hash {
 
     size_t keysize;
     size_t valsize;
-    size_t rehash_rate;
     size_t rehash_move;
+    uint8_t fill_rate;
 
     struct {
         size_t i;
@@ -48,6 +56,8 @@ static inline bool hash_alloc_table(struct hash *c, size_t n, size_t buckets);
 static inline void *hash_item_key(struct hash *c, struct hash_item *e);
 static inline void *hash_item_val(struct hash *c, struct hash_item *e);
 static inline size_t hash_item_size(struct hash*);
+
+static inline size_t upper_pow2(size_t);
 
 static inline size_t bucket(struct hash_table *c, size_t n) {
     return n % c->capacity;
@@ -86,20 +96,20 @@ struct hash *hash_create( size_t memsize
     c->alloc = alloc;
     c->dealloc = dealloc;
 
-    c->rehash_rate = 75;
-    c->rehash_move = 256;
+    c->fill_rate = 75;
+    c->rehash_move = 10000;
 
     c->rehash.i = 0;
 
-    if( !hash_alloc_table(c, 0, nbuckets) ) {
+    if( !hash_alloc_table(c, ACTIVE, nbuckets) ) {
         return 0;
     }
 
     return c;
 }
 
-void hash_set_rehash_values(struct hash *c, size_t r, size_t n) {
-    c->rehash_rate = r;
+void hash_set_rehash_values(struct hash *c, uint8_t r, size_t n) {
+    c->fill_rate = MAX(50, MIN(r, 90));
     c->rehash_move = n;
 }
 
@@ -196,12 +206,11 @@ static inline hash_rehash_step(struct hash *c) {
 
 static void hash_rehash_start(struct hash *c) {
 
-    // FIXME
     uint64_t used = active(c)->used * 100;
     uint64_t capacity = active(c)->capacity;
     uint64_t r = used / capacity;
 
-    if( shadow(c) || r < c->rehash_rate ) {
+    if( shadow(c) || r < c->fill_rate ) {
         return;
     }
 
@@ -245,10 +254,12 @@ static inline struct hash_item *hash_table_get(struct hash_table *t, size_t n) {
 
 static inline void hash_table_update(struct hash_table *t, size_t n, struct hash_item *e) {
     size_t i = bucket(t, n);
-    t->data[i] = e;
-    if( !t->data[i] && t->used ) {
+
+    if( t->data[i] && !e && t->used ) {
         t->used--;
     }
+
+    t->data[i] = e;
 }
 
 static inline void hash_find_all( struct hash *c
@@ -425,6 +436,10 @@ void hash_filter( struct hash *c
                     c->dealloc(c->allocator, it);
                 }
             }
+
+            if( t->data[i] && !ne && t->used ) {
+                t->used--;
+            }
             t->data[i] = ne;
         }
     }
@@ -454,6 +469,37 @@ void hash_enum( struct hash *c
     }
 
 }
+
+bool hash_shrink(struct hash *c, bool complete) {
+    hash_rehash_end(c);
+
+    if( shadow(c) ) {
+        // FIXME: error
+        return false;
+    }
+
+    const size_t u = active(c)->used;
+    const size_t f = c->fill_rate;
+
+    size_t capacity = upper_pow2(u + (u*100 - u*f)/100);
+
+    if( capacity > active(c)->capacity/2 ) {
+        return false;
+    }
+
+    if( !hash_alloc_table(c, SHADOW, capacity) ) {
+        return false;
+    }
+
+    c->rehash.i = 0;
+
+    if( complete ) {
+        hash_rehash_end(c);
+    }
+
+    return true;
+}
+
 
 void hash_stats( struct hash *c
                , size_t *capacity
@@ -512,3 +558,17 @@ static inline bool hash_alloc_table(struct hash *c, size_t n, size_t buck) {
 
     return false;
 }
+
+static inline size_t upper_pow2(size_t v)
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
+
+
