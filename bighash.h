@@ -23,13 +23,13 @@ struct hash *hash_create( size_t memsize
                         , void    (dealloc)(void*,void*)
                         );
 
-void hash_set_rehash_values(struct hash *c, size_t r, size_t n);
+void hash_set_rehash_values(struct hash *c, uint8_t fill, size_t n);
 
 void hash_rehash_end(struct hash *c);
 
 void hash_destroy(struct hash*);
 
-void hash_shrink(struct hash *);
+bool hash_shrink(struct hash *, bool);
 
 bool hash_add(struct hash *c, void *k, void *v);
 

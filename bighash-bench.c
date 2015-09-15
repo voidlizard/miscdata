@@ -449,11 +449,154 @@ void test_hash_rehash_1(void) {
     hash_destroy(c);
 }
 
+static bool __shrink_1_filt(void *cc, void *k, void *v) {
+
+    if( !(*(uint64_t*)k % 2) ) {
+        return true;
+    }
+
+    (*(size_t*)cc)++;
+    return false;
+}
+
+
+static bool __shrink_1_filt_less(void *cc, void *k, void *v) {
+
+    return *(uint64_t*)k < *(uint64_t*)cc;
+}
+
+static void __shrink_1_print(void *cc, void *k, void *v) {
+    fprintf(stdout, "(%zu,%zu)\n", *(uint64_t*)k, *(uint64_t*)v);
+}
+
+void test_hash_shrink_1(void) {
+    char mem[hash_size];
+
+    struct hash *c = hash_create( sizeof(mem)
+                                , mem
+                                , sizeof(uint64_t)
+                                , sizeof(uint64_t)
+                                , 32
+                                , __rehash_u64_hash
+                                , __u64_eq
+                                , __u64_cpy
+                                , __u64_cpy
+                                , 0
+                                , __rehash_alloc
+                                , __rehash_dealloc
+                                );
+
+    ranctx rctx;
+    raninit(&rctx, 0xDEADBEEF);
+
+    const size_t N = 1000;
+    size_t i = 0;
+
+    hash_set_rehash_values(c, 75, 10000);
+
+    size_t d = 0, a = 0;
+
+    for(; i < N; i++ ) {
+        uint64_t key = i;
+        uint64_t val = ranval(&rctx) % 1000000;
+
+        hash_add(c, &key, &val);
+    }
+
+    size_t cap = 0, used = 0, cls = 0, maxb = 0;
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+
+    size_t zu = 0;
+    hash_filter(c, &zu, __shrink_1_filt);
+
+    fprintf(stdout, "\nfiltered %zu\n\n", zu);
+
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+
+    fprintf(stdout, "\nshrink\n\n");
+    hash_shrink(c, true);
+
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+    zu = 100;
+    hash_filter(c, &zu, __shrink_1_filt_less);
+
+    fprintf(stdout, "\nfiltered > %zu\n\n", zu);
+
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+    hash_shrink(c, true);
+    fprintf(stdout, "\nshrink\n\n");
+
+    hash_stats(c, &cap, &used, &cls, &maxb);
+
+    fprintf( stdout
+           , "capacity:         %zu\n"
+             "used:             %zu\n"
+             "collisions (avg): %zu\n"
+             "max. row:         %zu\n"
+           , cap
+           , used
+           , cls
+           , maxb
+           );
+
+    hash_destroy(c);
+}
+
+
 int main(void) {
 /*    test_hash_create_1();*/
 /*    test_hash_create_2();*/
 /*    test_hash_create_3();*/
-    test_hash_rehash_1();
+/*    test_hash_rehash_1();*/
+    test_hash_shrink_1();
     return 0;
 }
 
