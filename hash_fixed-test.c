@@ -10,6 +10,14 @@
 
 #define words(x) ((x)/sizeof(void*))
 
+static bool __filt_even(void *c, void *k, void *v) {
+    return !! ( *(uint32_t*)k % 2);
+}
+
+static void __print(void *c, void *k, void *v) {
+    fprintf(stdout, "(%u,%u)\n", *(uint32_t*)k, *(uint32_t*)v);
+}
+
 void test_hash_fixed_1(void) {
 
     const size_t bkt = 32;
@@ -75,7 +83,18 @@ void test_hash_fixed_1(void) {
 
     print_hash_stat(h);
 
+    hash_filter(h, 0, __filt_even);
+
+    fprintf(stdout, "\nfiltered even\n\n");
+
+    print_hash_stat(h);
+
+    fprintf(stdout, "\ntrying shrink -- should make no effect\n\n");
+
+    hash_shrink(h, true);
+
+    print_hash_stat(h);
+
     hash_destroy(h);
-/*    const_mem_pool_destroy(pool);*/
 }
 
