@@ -22,6 +22,7 @@ struct hash {
 
     size_t keysize;
     size_t valsize;
+    size_t nbuckets;
     size_t rehash_move;
     uint8_t fill_rate;
 
@@ -87,6 +88,7 @@ struct hash *hash_create( size_t memsize
     c->alloc = alloc;
     c->dealloc = dealloc;
 
+    c->nbuckets = nbuckets;
     c->fill_rate = 75;
     c->rehash_move = 10000;
 
@@ -477,7 +479,7 @@ bool hash_shrink(struct hash *c, bool complete) {
     const size_t u = active(c)->used;
     const size_t f = c->fill_rate;
 
-    size_t capacity = upper_pow2(u + (u*100 - u*f)/100);
+    size_t capacity = MAX(c->nbuckets, upper_pow2(u + (u*100 - u*f)/100));
 
     if( capacity > active(c)->capacity/2 ) {
         return false;

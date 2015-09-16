@@ -1,0 +1,15 @@
+hash allocated? yes
+added something? yes
+found all ? yes
+capacity:         32
+used:             32
+collisions (avg): 1
+max. row:         3
+
+filtered
+capacity:         32
+used:             0
+collisions (avg): 0
+max. row:         0
+
+added: 0
