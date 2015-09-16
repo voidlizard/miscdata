@@ -523,9 +523,12 @@ void hash_stats( struct hash *c
     *collisions = *used ? total / *used : 0;
 }
 
-
 static size_t hash_item_size(struct hash *c) {
     return sizeof(struct hash_item) + c->keysize + c->valsize;
+}
+
+size_t hash_chunk_size(size_t k, size_t v) {
+    return sizeof(struct hash_item) + k + v;
 }
 
 static inline void *hash_item_key(struct hash *c, struct hash_item *e) {

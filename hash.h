@@ -64,4 +64,6 @@ void hash_stats( struct hash *c
                , size_t *maxbuck
                );
 
+size_t hash_chunk_size(size_t, size_t);
+
 #endif
