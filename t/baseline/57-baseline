@@ -22,3 +22,17 @@ capacity:         32
 used:             32
 collisions (avg): 2
 max. row:         4
+
+filtered even
+
+capacity:         32
+used:             16
+collisions (avg): 2
+max. row:         4
+
+trying shrink -- should make no effect
+
+capacity:         32
+used:             16
+collisions (avg): 2
+max. row:         4
