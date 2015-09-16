@@ -3,6 +3,8 @@
 
 #include "hash.h"
 
+size_t hash_size_fixed(size_t n, size_t k, size_t v);
+
 struct hash *hash_create_fixed( size_t size
                               , void *mem
                               , size_t keysize
