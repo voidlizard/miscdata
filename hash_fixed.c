@@ -18,19 +18,21 @@ struct hash *hash_create_fixed( size_t size
         return 0;
     }
 
-    return hash_create( hash_size
-                      , const_mem_pool_alloc(pool, hash_size)
-                      , keysize
-                      , valsize
-                      , nbuckets
-                      , hashfun
-                      , keycmp
-                      , keycopy
-                      , valcopy
-                      , pool
-                      , const_mem_pool_alloc
-                      , const_mem_pool_dealloc );
+    struct hash *h = hash_create( hash_size
+                                , const_mem_pool_alloc(pool, hash_size)
+                                , keysize
+                                , valsize
+                                , nbuckets
+                                , hashfun
+                                , keycmp
+                                , keycopy
+                                , valcopy
+                                , pool
+                                , const_mem_pool_alloc
+                                , const_mem_pool_dealloc );
 
+    // never rehash fixed hash
+    hash_set_rehash_values(h, 0, 0);
 }
 
 
