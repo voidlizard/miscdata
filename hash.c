@@ -135,6 +135,11 @@ void hash_destroy(struct hash *c) {
 
 static struct hash_item *hash_item_create(struct hash *c, uint32_t h, void *k, void *v) {
     struct hash_item *e = c->alloc(c->allocator, hash_item_size(c));
+
+    if( !e ) {
+        return 0;
+    }
+
     e->hc = h;
     e->next = 0;
     c->keycopy(hash_item_key(c,e), k);

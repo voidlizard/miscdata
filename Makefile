@@ -5,11 +5,14 @@ TESTSRC+=substr-test.c
 TESTSRC+=skiplist-test.c
 TESTSRC+=aa_map-test.c
 TESTSRC+=static_mem_pool-test.c
+TESTSRC+=const_mem_pool-test.c
 
 SOURCES := slist.c dradix.c hash.c clos.c maxheap.c substr_kmp.c
-SOURCES += skiplist.c 
-SOURCES += aa_map.c 
-SOURCES += static_mem_pool.c 
+SOURCES += hash_uint32.c
+SOURCES += skiplist.c
+SOURCES += aa_map.c
+SOURCES += static_mem_pool.c
+SOURCES += const_mem_pool.c
 SOURCES += test-suite.c
 SOURCES += $(TESTSRC)
 
