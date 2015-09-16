@@ -100,7 +100,7 @@ struct hash *hash_create( size_t memsize
 }
 
 void hash_set_rehash_values(struct hash *c, uint8_t r, size_t n) {
-    c->fill_rate = MAX(50, MIN(r, 90));
+    c->fill_rate = !r ? 0 : MAX(50, MIN(r, 90));
     c->rehash_move = n;
 }
 
@@ -206,7 +206,7 @@ static void hash_rehash_start(struct hash *c) {
     uint64_t capacity = active(c)->capacity;
     uint64_t r = used / capacity;
 
-    if( shadow(c) || r < c->fill_rate ) {
+    if( shadow(c) || r < c->fill_rate || !c->fill_rate ) {
         return;
     }
 
