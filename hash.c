@@ -523,12 +523,12 @@ void hash_stats( struct hash *c
     *collisions = *used ? total / *used : 0;
 }
 
-static size_t hash_item_size(struct hash *c) {
-    return sizeof(struct hash_item) + c->keysize + c->valsize;
-}
-
 size_t hash_chunk_size(size_t k, size_t v) {
     return sizeof(struct hash_item) + k + v;
+}
+
+static inline size_t hash_item_size(struct hash *c) {
+    return hash_chunk_size(c->keysize, c->valsize);;
 }
 
 static inline void *hash_item_key(struct hash *c, struct hash_item *e) {
@@ -541,6 +541,12 @@ static inline void *hash_item_val(struct hash *c, struct hash_item *e) {
 
 static inline size_t hash_table_size(size_t n) {
     return sizeof(struct hash_table) + n*sizeof(struct hash_table*);
+}
+
+size_t hash_minimal_mem_size(size_t bkt, size_t n, size_t k, size_t v) {
+    return  hash_size
+          + hash_table_size(bkt)
+          + n*hash_chunk_size(k,v);
 }
 
 static inline bool hash_alloc_table(struct hash *c, size_t n, size_t buck) {

@@ -64,6 +64,7 @@ void hash_stats( struct hash *c
                , size_t *maxbuck
                );
 
-size_t hash_chunk_size(size_t, size_t);
+size_t hash_chunk_size(size_t k, size_t v);
+size_t hash_minimal_mem_size(size_t bkt, size_t n, size_t k, size_t v);
 
 #endif
