@@ -6,7 +6,10 @@
 #include "hash_fixed.h"
 #include "hash_uint32.h"
 
+#include "hash_test_common.h"
+
 #define words(x) ((x)/sizeof(void*))
+
 
 void test_hash_fixed_1(void) {
     char mem[2048];
@@ -46,6 +49,25 @@ void test_hash_fixed_1(void) {
     }
 
     fprintf(stdout, "found all ? %s\n", i == j ? "yes" : "no");
+
+    print_hash_stat(h);
+
+    hash_filter(h, 0, 0);
+
+    fprintf(stdout, "\nfiltered\n");
+
+    print_hash_stat(h);
+
+    for(i=0;;i++) {
+        uint32_t k = i;
+        uint32_t v = i;
+        if( !hash_add(h, &k, &v) ) {
+            break;
+        }
+    }
+
+    // platform-dependend
+    fprintf(stdout, "\nadded: %zu\n", i);
 
     hash_destroy(h);
 /*    const_mem_pool_destroy(pool);*/

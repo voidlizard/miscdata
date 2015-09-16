@@ -33,6 +33,7 @@ struct hash *hash_create_fixed( size_t size
 
     // never rehash fixed hash
     hash_set_rehash_values(h, 0, 0);
+    return h;
 }
 
 

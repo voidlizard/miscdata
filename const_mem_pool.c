@@ -1,5 +1,7 @@
 #include "const_mem_pool.h"
 
+#include <stdio.h>
+
 void const_mem_pool_destroy(struct const_mem_pool *p) {
 }
 
@@ -21,6 +23,8 @@ struct const_mem_pool *const_mem_pool_create(size_t size, void *mem) {
 
 void *const_mem_pool_alloc(void *cc, size_t size) {
     struct const_mem_pool *pool = cc;
+
+/*    fprintf(stderr, "const. alloc %zu\n", size);*/
 
     if( pool->p + size < pool->pe ) {
         void *mem = pool->p;

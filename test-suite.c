@@ -39,6 +39,7 @@ static struct test_ {
     ,{  test_hash_create_3,  "test_hash_create_3" }
     ,{  test_hash_rehash_1,  "test_hash_rehash_1" }
     ,{  test_hash_shrink_1,  "test_hash_shrink_1" }
+    ,{  test_hash_shrink_2,  "test_hash_shrink_2" }
     ,{  test_clos_1,       "test_clos_1" }
     ,{  test_heap_test_1,  "test_heap_test_1" }
     ,{  test_heap_test_2,  "test_heap_test_2" }
