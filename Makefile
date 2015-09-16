@@ -6,9 +6,11 @@ TESTSRC+=skiplist-test.c
 TESTSRC+=aa_map-test.c
 TESTSRC+=static_mem_pool-test.c
 TESTSRC+=const_mem_pool-test.c
+TESTSRC+=hash_fixed-test.c
 
 SOURCES := slist.c dradix.c hash.c clos.c maxheap.c substr_kmp.c
 SOURCES += hash_uint32.c
+SOURCES += hash_fixed.c
 SOURCES += skiplist.c
 SOURCES += aa_map.c
 SOURCES += static_mem_pool.c

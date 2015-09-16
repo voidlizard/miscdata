@@ -66,6 +66,7 @@ static struct test_ {
     ,{  test_aa_map_no_val_copy_1, "test_aa_map_no_val_copy_1" }
     ,{  test_static_mem_pool_1,    "test_static_mem_pool_1" }
     ,{  test_const_mem_pool_1,    "test_const_mem_pool_1" }
+    ,{  test_hash_fixed_1,    "test_hash_fixed_1" }
     ,{  0,        ""         }
 };
 
