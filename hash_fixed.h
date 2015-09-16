@@ -3,7 +3,11 @@
 
 #include "hash.h"
 
-size_t hash_size_fixed(size_t n, size_t k, size_t v);
+size_t hash_mem_size_fixed( size_t bkt // bucket number
+                          , size_t n   // items number
+                          , size_t k   // key size
+                          , size_t v   // val size
+                          );
 
 struct hash *hash_create_fixed( size_t size
                               , void *mem

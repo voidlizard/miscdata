@@ -10,21 +10,25 @@
 
 #define words(x) ((x)/sizeof(void*))
 
-
 void test_hash_fixed_1(void) {
-    char mem[2048];
+
+    const size_t bkt = 32;
+
+    char mem[hash_mem_size_fixed(bkt, 100, sizeof(uint32_t), sizeof(uint32_t))];
+
+    fprintf(stderr, "mem size: %zu\n\n", sizeof(mem));
 
     struct hash *h = hash_create_fixed( sizeof(mem)
                                       , mem
                                       , sizeof(uint32_t)
                                       , sizeof(uint32_t)
-                                      , 32
+                                      , bkt
                                       , uint32_hash
                                       , uint32_eq
                                       , uint32_cpy
                                       , uint32_cpy );
 
-    fprintf(stdout, "hash allocated? %s\n", h ? "yes" : "no");
+    fprintf(stdout, "hash allocated? %s\n\n", h ? "yes" : "no");
 
     size_t i = 0;
     for(;;i++) {
@@ -35,10 +39,10 @@ void test_hash_fixed_1(void) {
         }
     }
 
-    fprintf(stdout, "added something? %s\n", i > 0 ? "yes" : "no");
+    fprintf(stdout, "added something? %s\n\n", i > 0 ? "yes" : "no");
 
     // platform-dependend
-    fprintf(stderr, "added %zu\n", i);
+    fprintf(stderr, "added %zu\n\n", i);
 
     size_t j = 0;
     for(; j < i; j++ ) {
@@ -48,13 +52,13 @@ void test_hash_fixed_1(void) {
         }
     }
 
-    fprintf(stdout, "found all ? %s\n", i == j ? "yes" : "no");
+    fprintf(stdout, "found all ? %s\n\n", i == j ? "yes" : "no");
 
     print_hash_stat(h);
 
     hash_filter(h, 0, 0);
 
-    fprintf(stdout, "\nfiltered\n");
+    fprintf(stdout, "\nfiltered off\n\n");
 
     print_hash_stat(h);
 
@@ -67,7 +71,9 @@ void test_hash_fixed_1(void) {
     }
 
     // platform-dependend
-    fprintf(stdout, "\nadded: %zu\n", i);
+    fprintf(stdout, "\nadded: %zu\n\n", i);
+
+    print_hash_stat(h);
 
     hash_destroy(h);
 /*    const_mem_pool_destroy(pool);*/
