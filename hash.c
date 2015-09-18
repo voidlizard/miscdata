@@ -540,7 +540,7 @@ static inline void *hash_item_val(struct hash *c, struct hash_item *e) {
 }
 
 static inline size_t hash_table_size(size_t n) {
-    return sizeof(struct hash_table) + n*sizeof(struct hash_table*);
+    return sizeof(struct hash_table) + n*sizeof(struct hash_item*);
 }
 
 size_t hash_minimal_mem_size(size_t bkt, size_t n, size_t k, size_t v) {

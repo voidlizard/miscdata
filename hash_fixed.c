@@ -7,16 +7,23 @@
 
 #include <stdio.h>
 
+#define DECL_FIXED_HASH_STRUCT(name) \
+    struct name {\
+        char hash_mem[hash_size];\
+        struct slist_allocator sa;\
+    }
+
 struct slist_allocator {
-    struct const_mem_pool *pool;
     slist *free;
     size_t size;
+    struct const_mem_pool mp;
 };
 
 size_t hash_mem_size_fixed(size_t bkt, size_t n, size_t k, size_t v) {
-    return   sizeof(struct const_mem_pool)
-           + sizeof(struct slist_allocator)
-           + hash_minimal_mem_size(bkt, n, k, v);
+    DECL_FIXED_HASH_STRUCT(fixed);
+    return   sizeof(struct fixed)
+           + hash_minimal_mem_size(bkt, n, k, v)
+           - hash_size;
 }
 
 static void *__alloc_slist(void *cc, size_t n) {
@@ -27,7 +34,7 @@ static void *__alloc_slist(void *cc, size_t n) {
         void *mem = slist_uncons(&sa->free);
         return mem;
     } else {
-        return const_mem_pool_alloc(sa->pool, MAX(sa->size, n));
+        return const_mem_pool_alloc(&sa->mp, MAX(sa->size, n));
     }
 
     return 0;
@@ -48,37 +55,29 @@ struct hash *hash_create_fixed( size_t size
                               , void     (*keycopy)(void *, void *)
                               , void     (*valcopy)(void *, void *) ) {
 
+    DECL_FIXED_HASH_STRUCT(fixed_hash);
 
-    const size_t ssz = sizeof(struct slist_allocator);
+    const size_t fhs = sizeof(struct fixed_hash);
 
-    void *pool = const_mem_pool_create(size, mem);
-
-    if( !pool ) {
+    if( size < fhs ) {
         return 0;
     }
 
-    void *hmem = const_mem_pool_alloc(pool, hash_size);
+    struct fixed_hash *fx = mem;
 
-    if( !hmem ) {
+    const size_t ch = MAX(slist_size(0), hash_chunk_size(keysize, valsize));
+
+    const size_t mpsize = size - fhs + sizeof(struct const_mem_pool);
+
+    if( !const_mem_pool_create(mpsize, &fx->sa.mp) ) {
         return 0;
     }
 
-    struct slist_allocator *ac = const_mem_pool_alloc(pool, ssz);
+    fx->sa.size = ch;
+    fx->sa.free = 0;
 
-    if( !ac ) {
-        return 0;
-    }
-
-    size_t ch = hash_chunk_size(keysize, valsize);
-
-    assert(ch >= slist_size(0));
-
-    ac->pool = pool;
-    ac->size = ch;
-    ac->free = 0;
-
-    struct hash *h = hash_create( hash_size
-                                , hmem
+    struct hash *h = hash_create( sizeof(fx->hash_mem)
+                                , fx->hash_mem
                                 , keysize
                                 , valsize
                                 , nbuckets
@@ -86,13 +85,19 @@ struct hash *hash_create_fixed( size_t size
                                 , keycmp
                                 , keycopy
                                 , valcopy
-                                , ac
+                                , &fx->sa
                                 , __alloc_slist
                                 , __dealloc_slist );
 
+    if( !h ) {
+        return 0;
+    }
+
     // never rehash fixed hash
     hash_set_rehash_values(h, 0, 0);
+
+    assert( h == mem );
+
     return h;
 }
-
 
