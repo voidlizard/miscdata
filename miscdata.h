@@ -10,6 +10,6 @@
 #endif
 
 #define safecall(v, f, ...) ((f) ? (f(__VA_ARGS__)) : (v))
-#define unit
+#define unit ({})
 
 #endif
