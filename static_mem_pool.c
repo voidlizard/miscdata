@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "miscdata.h"
-#include "static_mem_pool.h" 
+#include "static_mem_pool.h"
 
 #define PAGESIZE 4096
 
@@ -31,7 +31,7 @@ static struct mem_chunk *mem_chunk_init( struct static_mem_pool *p
                                        ) {
 
     if( !c ) {
-        p->nomem(p->nomemcc);
+        safecall(unit, p->nomem, p->nomemcc);
         return 0;
     }
 
@@ -85,7 +85,7 @@ void *static_mem_pool_alloc(void *cc, size_t n) {
                                               , size - mem_chunk_size(0) );
 
         if( !nc ) {
-            m->nomem(m->nomemcc);
+            safecall(unit, m->nomem, m->nomemcc);
             return 0;
         }
 
