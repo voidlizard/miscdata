@@ -7,7 +7,9 @@
 #include <inttypes.h>
 
 #include "hash.h"
+#include "hash_uint32.h"
 #include "hash_test_common.h"
+#include "const_mem_pool.h"
 
 #include "prng.h"
 
@@ -577,4 +579,45 @@ void test_hash_shrink_2(void) {
     hash_destroy(c);
 
 }
+
+void test_hash_minimal_mem_size(void) {
+
+    const size_t N   = 10;
+    const size_t BKT = 64;
+
+    char mem[hash_minimal_mem_size(BKT, N, sizeof(uint32_t), sizeof(uint32_t))+sizeof(struct const_mem_pool)];
+
+    void *p = const_mem_pool_create(sizeof(mem), mem);
+
+    struct hash *c = hash_create( hash_size
+                                , const_mem_pool_alloc(p, hash_size)
+                                , sizeof(uint32_t)
+                                , sizeof(uint32_t)
+                                , BKT
+                                , uint32_hash
+                                , uint32_eq
+                                , uint32_cpy
+                                , uint32_cpy
+                                , p
+                                , const_mem_pool_alloc
+                                , const_mem_pool_dealloc
+                                );
+
+    hash_set_rehash_values(c, 0, 0);
+
+    size_t i = 0, j = 0;
+
+    for(; i < N; i++ ) {
+        uint32_t key = i;
+        uint32_t val = i;
+        if( hash_add(c, &key, &val) ) {
+            j++;
+        }
+    }
+
+    fprintf(stdout, "\nadded %zu ~ %zu\n", i, j);
+
+    hash_destroy(c);
+}
+
 

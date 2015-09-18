@@ -68,6 +68,8 @@ static struct test_ {
     ,{  test_static_mem_pool_1,    "test_static_mem_pool_1" }
     ,{  test_const_mem_pool_1,    "test_const_mem_pool_1" }
     ,{  test_hash_fixed_1,    "test_hash_fixed_1" }
+    ,{  test_hash_minimal_mem_size,  "test_hash_minimal_mem_size" }
+    ,{  test_hash_fixed_nested_1,  "test_hash_fixed_nested_1" }
     ,{  0,        ""         }
 };
 
