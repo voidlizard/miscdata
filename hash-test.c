@@ -621,3 +621,129 @@ void test_hash_minimal_mem_size(void) {
 }
 
 
+struct shrink_str_1_cc {
+    char *k;
+    uint32_t *v;
+};
+
+static void __print_shrink_str_1(void *cc, void *k, void *v) {
+    fprintf(stdout, "(%s, %u)\n", (char*)k, *(uint32_t*)v);
+}
+
+static void __shrink_str_1_find(void *cc_, void *k, void *v) {
+
+    struct shrink_str_1_cc *cc = cc_;
+
+    if( *(uint32_t*)v == 8 && !cc->k ) {
+        cc->k = k;
+        cc->v = v;
+    }
+}
+
+static bool __shrink_str_1_filt(void *cc_, void *k, void *v) {
+    if( *(uint32_t*)v < 9 ) {
+        hash_add(cc_, &k, &v);
+        return true;
+    }
+    return false;
+}
+
+static void __shrink_str_1_verify(void *pc, void *k, void *v) {
+    void **kp = hash_get(pc, &k);
+    fprintf(stdout
+           , "%8s: %u %s\n"
+           , (char*)k
+           , *(uint32_t*)v
+           , v == *kp ? "OK" : "FAIL"
+           );
+}
+
+static void __shrink_str_1_pp_print(void *cc, void *k, void *v) {
+    fprintf(stdout, "(%s,%u)\n", (char*)*(void**)k, *(uint32_t*)*(void**)v);
+}
+
+static uint32_t __ptr_hash(void *k) {
+    void *p = *(void**)k;
+    return (uint32_t)(unsigned long long)p;
+}
+static bool __ptr_eq(void *a, void *b) {
+    return *(void**)a == *(void**)b;
+}
+
+static void __ptr_cpy(void *a, void *b) {
+    *(void**)a = *(void**)b;
+}
+
+void test_hash_shrink_str_1(void) {
+
+    const size_t N   = 1000;
+    const size_t BKT = 16;
+
+    char mem[hash_size];
+
+    struct hash *c = hash_create( hash_size
+                                , mem
+                                , CSTRING_MAX
+                                , sizeof(uint32_t)
+                                , BKT
+                                , __cstring_hash
+                                , __cstring_eq
+                                , __cstring_cpy
+                                , uint32_cpy
+                                , 0
+                                , __alloc
+                                , __dealloc
+                                );
+
+    char mem2[hash_size];
+
+    struct hash *pc = hash_create( hash_size
+                                 , mem2
+                                 , sizeof(void*)
+                                 , sizeof(void*)
+                                 , BKT
+                                 , __ptr_hash
+                                 , __ptr_eq
+                                 , __ptr_cpy
+                                 , __ptr_cpy
+                                 , 0
+                                 , __alloc
+                                 , __dealloc
+                                 );
+
+    size_t i = 0, j = 0;
+
+    ranctx rctx;
+    raninit(&rctx, 0x010101010101);
+
+    for(; i < N; i++ ) {
+        size_t l = 1 + ranval(&rctx) % 79;
+        char tmp[l+1];
+        for(j = 0; j < l; j++ ) {
+            const char alph[] = "ABCDEFGHIJKLMNOPRSTUVWXY0123456789";
+            tmp[j] =  alph[ranval(&rctx) % (sizeof(alph)-2)];
+        }
+        tmp[j] = 0;
+        hash_add(c, &tmp, &j);
+    }
+
+    print_hash_stat(c);
+
+    hash_filter(c, pc, __shrink_str_1_filt);
+
+    hash_shrink(c, true);
+
+    fprintf(stdout, "\nfiltered\n\n");
+
+    print_hash_stat(c);
+
+    fprintf(stdout, "\n");
+
+    hash_enum(pc, 0, __shrink_str_1_pp_print);
+
+    hash_enum(c, pc, __shrink_str_1_verify);
+
+    hash_destroy(c);
+    hash_destroy(pc);
+}
+

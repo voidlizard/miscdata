@@ -70,6 +70,7 @@ static struct test_ {
     ,{  test_hash_fixed_1,    "test_hash_fixed_1" }
     ,{  test_hash_minimal_mem_size,  "test_hash_minimal_mem_size" }
     ,{  test_hash_fixed_nested_1,  "test_hash_fixed_nested_1" }
+    ,{  test_hash_shrink_str_1,  "test_hash_shrink_str_1" }
     ,{  0,        ""         }
 };
 
