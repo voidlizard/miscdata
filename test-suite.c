@@ -72,6 +72,7 @@ static struct test_ {
     ,{  test_hash_fixed_nested_1,  "test_hash_fixed_nested_1" }
     ,{  test_hash_shrink_str_1,  "test_hash_shrink_str_1" }
     ,{  test_slist_set_value_1,  "test_slist_set_value_1" }
+    ,{  test_slist_reverse_1,  "test_slist_reverse_1" }
     ,{  0,        ""         }
 };
 

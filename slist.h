@@ -36,6 +36,7 @@ size_t slist_length(slist *head);
 
 void slist_foreach(slist*, void *cc, void (*)(void*, void*));
 
+void slist_reverse(slist **r);
 
 // keeps order
 void slist_filt_destructive( slist **xs
