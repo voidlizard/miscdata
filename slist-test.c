@@ -186,4 +186,26 @@ void test_slist_char_array_1(void) {
     }
 }
 
+void test_slist_set_value_1(void) {
+
+    {
+        char edata[ slist_size(sizeof(char*)) ];
+        slist *e = (slist*)edata;
+
+        slist_set_value(char*,e,"FUBAR");
+        fprintf(stdout, "s1: %s\n", *slist_value(char**,e));
+    }
+
+    {
+        char edata[ slist_size(sizeof(int)) ];
+        slist *e = (slist*)edata;
+
+        slist_set_value(int,e,0xDEADBEEF);
+        fprintf(stdout, "s2: %x\n", *slist_value(int*,e));
+    }
+
+
+}
+
+
 
