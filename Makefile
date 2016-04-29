@@ -1,6 +1,6 @@
 .PHONY: ctags clean baseline check
 
-TESTSRC=dradix-test.c hash-test.c slist-test.c clos-test.c heap-test.c
+TESTSRC=dradix-test.c hash-test.c slist-test.c clos-test.c heap-test.c mqueue-test.c
 TESTSRC+=substr-test.c
 TESTSRC+=skiplist-test.c
 TESTSRC+=aa_map-test.c
@@ -13,6 +13,7 @@ SOURCES += hash_uint32.c
 SOURCES += hash_fixed.c
 SOURCES += skiplist.c
 SOURCES += aa_map.c
+SOURCES += mqueue.c
 SOURCES += static_mem_pool.c
 SOURCES += const_mem_pool.c
 SOURCES += test-suite.c
