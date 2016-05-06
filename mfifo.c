@@ -187,6 +187,13 @@ void mfifo_drop( struct mfifo *fifo, void *data ) {
     fifo->free_chunks_num++;
 }
 
+void *mfifo_head( struct mfifo *fifo ) {
+    if( !fifo->head )
+        return 0;
+
+    return fifo->head->data;
+}
+
 void mfifo_iter_fwd( struct mfifo *fifo, void *cc, void (*fn)(void*,void*) ) {
 
     if( !fn ) {

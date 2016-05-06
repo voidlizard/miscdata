@@ -141,5 +141,52 @@ void test_mfifo_drop_1(void) {
     fprintf(stdout, "drop\n", *q);
     mfifo_dump_status(fifo);
 
+    mfifo_destroy(fifo);
+
+}
+
+void test_mfifo_head_1(void) {
+    char mem[mfifo_size()];
+
+    struct mfifo *fifo = mfifo_create( mem
+                                     , sizeof(mem)
+                                     , sizeof(int)
+                                     , 16
+                                     , 0
+                                     , __alloc
+                                     , __dealloc
+                                     );
+
+    mfifo_dump_status(fifo);
+
+    size_t i = 0;
+    for(; i < 10; i++ ) {
+
+        int *v = mfifo_add(fifo);
+
+        if( !v ) break;
+
+        if( v ) {
+            *v = (int)i;
+        }
+    }
+
+
+    fprintf(stdout, "\n");
+    mfifo_iter_fwd(fifo, stdout, __print_int);
+    fprintf(stdout, "\n");
+
+    int *h = mfifo_head(fifo);
+
+    (*h)++;
+    (*h)++;
+    (*h)++;
+    (*h)++;
+
+    mfifo_iter_fwd(fifo, stdout, __print_int);
+    fprintf(stdout, "\n");
+
+    mfifo_dump_status(fifo);
+    mfifo_destroy(fifo);
 }
 

@@ -76,6 +76,7 @@ static struct test_ {
     ,{  test_mfifo_create_1,  "test_mfifo_create_1" }
     ,{  test_mfifo_create_2,  "test_mfifo_create_2" }
     ,{  test_mfifo_drop_1,  "test_mfifo_drop_1" }
+    ,{  test_mfifo_head_1,  "test_mfifo_head_1" }
     ,{  0,        ""         }
 };
 
