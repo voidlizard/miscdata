@@ -28,7 +28,7 @@ build-tests:
 	echo $(TESTSRC)
 	cat $(TESTSRC) | egrep -o 'void\s+test_.*\s*\(\s*void\s*\)' | awk '{printf("%s %s;\n",$$1,$$2)}' >> t/test-suite.h
 	echo "#endif" >> t/test-suite.h
-	gcc -g -Wall $(SOURCES) -o test-suite
+	gcc -DMISCDATA_RT_ENABLE=1 -g -Wall $(SOURCES) -o test-suite
 
 ctags:
 	ctags *.c

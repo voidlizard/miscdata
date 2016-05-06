@@ -16,10 +16,17 @@ struct mfifo *mfifo_create( void *mem
                           , void (*dealloc)(void*,void*)
                           );
 
+void mfifo_destroy( struct mfifo *);
+void mfifo_shrink( struct mfifo *);
+
 void *mfifo_add( struct mfifo *fifo );
 void *mfifo_get( struct mfifo *fifo );
 
 void mfifo_iter_fwd( struct mfifo *fifo, void *cc, void (*fn)(void*,void*) );
 void mfifo_iter_back( struct mfifo *fifo, void *cc, void (*fn)(void*,void*) );
+
+#ifdef MISCDATA_RT_ENABLE
+void mfifo_dump_status(struct mfifo *);
+#endif
 
 #endif

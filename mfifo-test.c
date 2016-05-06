@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "mfifo.h"
 
@@ -46,6 +47,8 @@ void test_mfifo_create_1(void) {
     fprintf(stdout, "\n");
     mfifo_iter_back(fifo, stdout, __print_int);
     fprintf(stdout, "\n");
+
+    mfifo_destroy(fifo);
 }
 
 
@@ -62,6 +65,8 @@ void test_mfifo_create_2(void) {
                                      , __dealloc
                                      );
 
+    mfifo_dump_status(fifo);
+
     size_t q = 0;
 
     for(; q < 16; q++ ) {
@@ -71,19 +76,37 @@ void test_mfifo_create_2(void) {
 
             int *v = mfifo_add(fifo);
 
+            if( !v ) break;
+
             if( v ) {
                 *v = (int)i;
             }
         }
 
+        fprintf(stdout, "added %d\n", (int)i);
+        mfifo_dump_status(fifo);
+
         int *z = 0;
 
+        int l = 7;
+        while( (z = mfifo_get(fifo)) )  {
+            fprintf(stdout, "%02x ", *z);
+            if( ! (--l ) ) break;
+        }
+
+        mfifo_shrink(fifo);
+        fprintf(stdout, "\nafter shrink\n");
+        mfifo_dump_status(fifo);
+
+        z = 0;
         while( (z = mfifo_get(fifo)) )  {
             fprintf(stdout, "%02x ", *z);
         }
+
         fprintf(stdout, "\n");
     }
 
+    mfifo_destroy(fifo);
 }
 
 

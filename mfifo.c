@@ -1,9 +1,8 @@
-
 #include "mfifo.h"
 #include "miscdata.h"
 
 struct chunk {
-    struct chunk *n; // __MUST__ be the first element of the chunk
+    struct chunk *n;
     struct chunk *p;
     char data[0];
 };
@@ -27,14 +26,52 @@ const size_t mfifo_size(void) {
     return sizeof(struct mfifo);
 }
 
+#define full_chunk_size(fifo) (sizeof(struct chunk) + (fifo)->chunk_size)
+
+void mfifo_destroy(struct mfifo *fifo) {
+
+    struct chunk *it = fifo->head;
+
+    while( it ) {
+        struct chunk *tmp = it;
+        it = it->n;
+        fifo->dealloc(fifo->allocator, tmp);
+    }
+
+    it = fifo->free;
+
+    while( it ) {
+        struct chunk *tmp = it;
+        it = it->n;
+        fifo->dealloc(fifo->allocator, tmp);
+    }
+
+    fifo->free = 0;
+    fifo->head = 0;
+    fifo->tail = 0;
+    fifo->free_chunks_num = 0;
+}
+
+void mfifo_shrink( struct mfifo *fifo) {
+
+    struct chunk *it = fifo->free;
+
+    for(; it && fifo->free_chunks_num > fifo->free_chunks_max; fifo->free_chunks_num-- ) {
+        struct chunk *tmp = it;
+        it = it->n;
+        fifo->dealloc(fifo->allocator, tmp);
+    }
+}
+
+
 struct mfifo *mfifo_create( void   *mem
-                                        , size_t memsize
-                                        , size_t chunk_size
-                                        , size_t free_chunks_max
-                                        , void *allocator
-                                        , void *(*alloc)(void *, size_t)
-                                        , void (*dealloc)(void*,void*)
-                                        ) {
+                          , size_t memsize
+                          , size_t chunk_size
+                          , size_t free_chunks_max
+                          , void *allocator
+                          , void *(*alloc)(void *, size_t)
+                          , void (*dealloc)(void*,void*)
+                          ) {
 
 
     if( memsize < mfifo_size() ) {
@@ -54,17 +91,46 @@ struct mfifo *mfifo_create( void   *mem
     fifo->tail = 0;
     fifo->free = 0;
 
+    size_t i = 0;
+    for(; i < fifo->free_chunks_max/2; i++ ) {
+        struct chunk *ch = fifo->alloc(fifo->allocator, full_chunk_size(fifo));
+
+        if( !ch ) {
+            break;
+        }
+
+        ch->p = 0;
+        ch->n = fifo->free;
+        fifo->free = ch;
+        fifo->free_chunks_num++;
+    }
+
     return fifo;
 }
 
 void *mfifo_add( struct mfifo *fifo ) {
 
-    const size_t n = sizeof(struct chunk) + fifo->chunk_size;
+    const size_t n = full_chunk_size(fifo);
 
     struct chunk *oldtail = fifo->tail;
 
     // FIXME: get from pool first
-    struct chunk *ch = fifo->alloc(fifo->allocator, n);
+
+    struct chunk *ch = 0;
+
+    if( fifo->free ) {
+        ch = fifo->free;
+        fifo->free = fifo->free->n;
+        fifo->free_chunks_num--;
+    }
+
+    if( !ch ) {
+        ch = fifo->alloc(fifo->allocator, n);
+    }
+
+    if( !ch ) {
+        return 0;
+    }
 
     fifo->tail = ch;
     ch->n = 0;
@@ -95,9 +161,10 @@ void *mfifo_get( struct mfifo *fifo ) {
         fifo->head->p = 0;
     }
 
-    // return item to pool or deallocate
-
     if( h ) {
+        h->n = fifo->free;
+        fifo->free = h;
+        fifo->free_chunks_num++;
         return h->data;
     }
 
@@ -129,3 +196,26 @@ void mfifo_iter_back( struct mfifo *fifo, void *cc, void (*fn)(void*,void*) ) {
 }
 
 
+#ifdef MISCDATA_RT_ENABLE
+
+#include <stdio.h>
+
+void mfifo_dump_status(struct mfifo *fifo) {
+    fprintf(stdout, "mfifo_dump_status\n"
+                    "  chunk_size: %d\n"
+                    "  free_chunks_max: %d\n"
+                    "  free_chunks_num: %d\n"
+                    "  head: %s\n"
+                    "  tail: %s\n"
+                    "  free: %s\n"
+
+                  , (int)fifo->chunk_size
+                  , (int)fifo->free_chunks_max
+                  , (int)fifo->free_chunks_num
+                  , fifo->head ? "xxxx" : "nil"
+                  , fifo->tail ? "xxxx" : "nil"
+                  , fifo->free ? "xxxx" : "nil"
+                  );
+}
+
+#endif
