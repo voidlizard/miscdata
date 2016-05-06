@@ -52,7 +52,6 @@ void test_mfifo_create_1(void) {
 }
 
 
-
 void test_mfifo_create_2(void) {
     char mem[mfifo_size()];
 
@@ -91,6 +90,7 @@ void test_mfifo_create_2(void) {
         int l = 7;
         while( (z = mfifo_get(fifo)) )  {
             fprintf(stdout, "%02x ", *z);
+            mfifo_drop(fifo, z);
             if( ! (--l ) ) break;
         }
 
@@ -101,6 +101,7 @@ void test_mfifo_create_2(void) {
         z = 0;
         while( (z = mfifo_get(fifo)) )  {
             fprintf(stdout, "%02x ", *z);
+            mfifo_drop(fifo, z);
         }
 
         fprintf(stdout, "\n");
@@ -109,4 +110,36 @@ void test_mfifo_create_2(void) {
     mfifo_destroy(fifo);
 }
 
+
+void test_mfifo_drop_1(void) {
+    char mem[mfifo_size()];
+
+    struct mfifo *fifo = mfifo_create( mem
+                                     , sizeof(mem)
+                                     , sizeof(int)
+                                     , 16
+                                     , 0
+                                     , __alloc
+                                     , __dealloc
+                                     );
+
+    mfifo_dump_status(fifo);
+
+    int *v = mfifo_add(fifo);
+    *v = 10;
+
+    mfifo_dump_status(fifo);
+
+    int *q = mfifo_get(fifo);
+
+    mfifo_shrink(fifo);
+    mfifo_dump_status(fifo);
+
+    fprintf(stdout, "still here: %d\n", *q);
+
+    mfifo_drop(fifo, q);
+    fprintf(stdout, "drop\n", *q);
+    mfifo_dump_status(fifo);
+
+}
 

@@ -14,6 +14,7 @@ struct mfifo {
 
     struct chunk *head;
     struct chunk *tail;
+    struct chunk *used;
     struct chunk *free;
 
     // allocator
@@ -46,6 +47,16 @@ void mfifo_destroy(struct mfifo *fifo) {
         fifo->dealloc(fifo->allocator, tmp);
     }
 
+    it = fifo->used;
+
+    while( it ) {
+        struct chunk *tmp = it;
+        it = it->n;
+        fifo->dealloc(fifo->allocator, tmp);
+    }
+
+
+    fifo->used = 0;
     fifo->free = 0;
     fifo->head = 0;
     fifo->tail = 0;
@@ -90,6 +101,7 @@ struct mfifo *mfifo_create( void   *mem
     fifo->head = 0;
     fifo->tail = 0;
     fifo->free = 0;
+    fifo->used = 0;
 
     size_t i = 0;
     for(; i < fifo->free_chunks_max/2; i++ ) {
@@ -113,8 +125,6 @@ void *mfifo_add( struct mfifo *fifo ) {
     const size_t n = full_chunk_size(fifo);
 
     struct chunk *oldtail = fifo->tail;
-
-    // FIXME: get from pool first
 
     struct chunk *ch = 0;
 
@@ -162,13 +172,19 @@ void *mfifo_get( struct mfifo *fifo ) {
     }
 
     if( h ) {
-        h->n = fifo->free;
-        fifo->free = h;
-        fifo->free_chunks_num++;
+        h->n = fifo->used;
+        fifo->used = h;
         return h->data;
     }
 
     return 0;
+}
+
+void mfifo_drop( struct mfifo *fifo, void *data ) {
+    struct chunk *ch = data - sizeof(struct chunk);
+    ch->n = fifo->free;
+    fifo->free = ch;
+    fifo->free_chunks_num++;
 }
 
 void mfifo_iter_fwd( struct mfifo *fifo, void *cc, void (*fn)(void*,void*) ) {

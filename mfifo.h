@@ -21,6 +21,7 @@ void mfifo_shrink( struct mfifo *);
 
 void *mfifo_add( struct mfifo *fifo );
 void *mfifo_get( struct mfifo *fifo );
+void mfifo_drop( struct mfifo *fifo, void *data );
 
 void mfifo_iter_fwd( struct mfifo *fifo, void *cc, void (*fn)(void*,void*) );
 void mfifo_iter_back( struct mfifo *fifo, void *cc, void (*fn)(void*,void*) );
