@@ -11,6 +11,7 @@ TESTSRC+=hash_fixed-test.c
 SOURCES := slist.c dradix.c hash.c clos.c maxheap.c substr_kmp.c
 SOURCES += hash_uint32.c
 SOURCES += hash_cstring.c
+SOURCES += hash_fletcher32.c
 SOURCES += hash_fixed.c
 SOURCES += skiplist.c
 SOURCES += aa_map.c
