@@ -210,3 +210,57 @@ void test_heap_test_4(void) {
     }
 }
 
+
+void test_heap_test_5(void) {
+
+    const uint32_t N = 100000;
+    size_t attemps = 10;
+
+    for(; attemps--; ) {
+
+        char heap_mem[heap_mem_size(N, sizeof(uint32_t))];
+        struct heap *h = heap_create( heap_mem
+                                    , sizeof(heap_mem)
+                                    , sizeof(uint32_t)
+                                    , u32_leq
+                                    , u32_cpy );
+
+
+        size_t i = 0;
+        for(i = 0; i < N; i++ ) {
+            uint32_t tmp = i;
+            heap_add(h, &tmp);
+        }
+
+    }
+
+    fprintf(stdout, "done\n");
+}
+
+void test_heap_test_6(void) {
+
+    const uint32_t N = 100000;
+
+    size_t attemps = 10;
+
+    for(; attemps--; ) {
+        char heap_mem[heap_mem_size(N, sizeof(uint32_t))];
+        struct heap *h = heap_create( heap_mem
+                                    , sizeof(heap_mem)
+                                    , sizeof(uint32_t)
+                                    , u32_leq
+                                    , u32_cpy );
+
+
+        size_t i = 0;
+        for(i = 0; i < N; i++ ) {
+            uint32_t tmp = 10;
+            heap_add(h, &tmp);
+        }
+    }
+    fprintf(stdout, "done\n");
+}
+
+
+
+
